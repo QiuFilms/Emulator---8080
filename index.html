@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>8080 Emulator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&family=VT323&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    
+    <script src="index.js" type="module" defer></script>
+
+
+</head>
+<body>
+    <header>
+    </header>
+    <main>
+        <div class="left">
+        <div class="definition">Test</div>
+
+            <ul class="lineIndicator">
+                <li onclick="addBreakPoint.call(this)">1</li>
+            </ul>
+            <div class="def">?</div>
+            <div class="buttons">
+                <div class="start button" onclick="readASM.call(false)">Start</div>
+                <div class="step button" onclick="readASM.call(true)">Step</div>
+            </div>
+            <textarea placeholder="Your code goes here" cols="30" rows="5" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" oninput="auto_grow(this)"></textarea>
+            <pre class="formattedCode"></pre>
+        </div>
+        <div class="right">
+            <div class="outerRegisters">
+                <div class="registers">
+                    <div class="registerPair">
+                        <div class="register">
+                            <div class="registerName" id="registerA">A</div>
+                            <div class="registerValue" id="registerAvalue">00H</div>
+                        </div>
+                    </div>
+                    <div class="registerPair">
+                        <div class="register">
+                            <div class="registerName" id="registerB">B</div>
+                            <div class="registerValue" id="registerBvalue">00H</div>
+                        </div>
+                        <div class="register">
+                            <div class="registerName" id="registerC">C</div>
+                            <div class="registerValue" id="registerCvalue">00H</div>
+                        </div>
+                    </div>
+                    <div class="registerPair">
+                        <div class="register">
+                            <div class="registerName" id="registerD">D</div>
+                            <div class="registerValue" id="registerDvalue">00H</div>
+                        </div>
+                        <div class="register">
+                            <div class="registerName" id="registerE">E</div>
+                            <div class="registerValue" id="registerEvalue">00H</div>
+                        </div>
+                    </div>
+                    <div class="registerPair">
+                        <div class="register">
+                            <div class="registerName" id="registerH">H</div>
+                            <div class="registerValue" id="registerHvalue">00H</div>
+                        </div>
+                        <div class="register">
+                            <div class="registerName" id="registerL">L</div>
+                            <div class="registerValue" id="registerLvalue">00H</div>
+                        </div>
+                    </div>
+                </div> 
+                <div class="registers">
+                    <div class="registerHex">
+                        <div class="registerName" id="registerPC">PC</div>
+                        <div class="registerValue" id="registerPCvalue">0000H</div>
+                    </div>
+                    <div class="registerHex">
+                        <div class="registerName" id="registerSP">SP</div>
+                        <div class="registerValue" id="registerSPvalue">0000H</div>
+                    </div>
+                    <div class="flagRegister">
+                        <div class="flag">
+                            <div class="flagName flagEven" id="flagS">S</div>
+                            <div class="flagValue" id="flagSvalue">0</div>
+                        </div>
+                        <div class="flag">
+                            <div class="flagName flagOdd" id="flagZ">Z</div>
+                            <div class="flagValue" id="flagZvalue">0</div>
+                        </div>
+                        <div class="flag">
+                            <div class="flagNone"></div>
+                            <div class="flagValue">0</div>
+                        </div>
+                        <div class="flag">
+                            <div class="flagName flagEven" id="flagAC">AC</div>
+                            <div class="flagValue" id="flagACvalue">0</div>
+                        </div>
+                        <div class="flag">
+                            <div class="flagNone"></div>
+                            <div class="flagValue">0</div>
+                        </div>
+                        <div class="flag">
+                            <div class="flagName flagOdd" id="flagP">P</div>
+                            <div class="flagValue" id="flagPvalue">0</div>
+                        </div>
+                        <div class="flag">
+                            <div class="flagNone"></div>
+                            <div class="flagValue">1</div>
+                        </div>
+                        <div class="flag">
+                            <div class="flagName flagEven" id="flagCY">CY</div>
+                            <div class="flagValue" id="flagCYvalue">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="outerDisplay">
+                <div class="display" tabindex="0"></div>
+            </div>
+        </div>
+    </main>
+    <footer></footer>
+</body>
+</html>

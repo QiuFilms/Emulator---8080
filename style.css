@@ -1,0 +1,508 @@
+.roboto-thin {
+    font-family: "Roboto", sans-serif;
+    font-weight: 100;
+    font-style: normal;
+  }
+  
+  .roboto-light {
+    font-family: "Roboto", sans-serif;
+    font-weight: 300;
+    font-style: normal;
+  }
+  
+  .roboto-regular {
+    font-family: "Roboto", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+  }
+  
+  .roboto-medium {
+    font-family: "Roboto", sans-serif;
+    font-weight: 500;
+    font-style: normal;
+  }
+  
+  .roboto-bold {
+    font-family: "Roboto", sans-serif;
+    font-weight: 700;
+    font-style: normal;
+  }
+  
+  .roboto-black {
+    font-family: "Roboto", sans-serif;
+    font-weight: 900;
+    font-style: normal;
+  }
+
+*{
+    margin: 0;
+    padding: 0;
+    font-family: "Roboto", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+}
+
+::-webkit-scrollbar {
+    width: 10px;
+  }
+
+::-webkit-scrollbar-track {
+    background: #222831; 
+}
+
+::-webkit-scrollbar-thumb {
+    background: #7e7e7f; 
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555; 
+}
+
+
+main{
+    display: flex;
+    z-index: 99;
+}
+
+header{
+    height: 40px;
+    background-color: #222831;
+    z-index: 1;
+}
+
+
+footer{
+    height: 20px;
+    background-color: #222831;
+}
+
+.left{
+    width: 60%;
+    background-color: #222831;
+    height: calc(100vh - 60px);
+    display: flex;
+    overflow-y: scroll;
+    position: relative;
+    z-index: 99;
+}
+
+textarea{
+    width: calc(100% - 70px);
+    min-height: calc(100% - 10px);
+    padding: 5px;
+    padding-left: 25px;
+    
+    background-color: #393E46;
+    border: none;
+    outline: none;
+    resize: none;
+    font-size: 16px;
+    line-height: 24px;
+    color: transparent;
+    font-family: "Roboto", sans-serif;
+    font-weight: 700;
+    font-style: normal;
+    overflow: hidden;
+    cursor: text;
+    caret-color: rgb(221, 221, 221);
+}
+
+.formattedCode{
+  position: absolute;
+  z-index: 98;
+  left: 65px;
+  top: 5px;
+  font-size: 16px;
+  line-height: 24px;
+  font-family: "Roboto", sans-serif;
+  font-weight: 700;
+  color: rgb(221, 221, 221);
+  pointer-events: none;
+  width: calc(100% - 70px);
+  display: flex;
+  flex-direction: column;
+}
+
+
+::selection {
+  color: transparent;
+  background: rgb(222, 176, 176);
+}
+
+.lineIndicator{
+    padding-top: 5px;
+    width: 50px;
+    background-color: #1F1F1F;
+}
+
+.lineIndicator > li {
+    font-size: 16px;
+    line-height: 24px;
+    color: rgb(184, 184, 184);
+    /* padding-inline: 14px; */
+    padding-right: 5px;
+    text-align: right;
+ 
+}
+
+.lineIndicator > li:nth-of-type(2n + 1) {
+    background-color: #1F1F1F;
+}
+  
+.lineIndicator > li:nth-of-type(2n) {
+    background-color: #2e3035;
+}
+
+.def{
+  top: 5px;
+  position: absolute;
+  left: 51px;
+  height: 13px;
+  width: 13px;
+  margin: 3px;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+  font-size: 12px;
+  border: 2px solid lightslategray;
+  color: lightslategray;
+  font-weight: 700;
+  cursor: default;
+  z-index: 99;
+}
+
+.def:hover + .definition{
+  display: block;
+}
+
+/* .def > li{
+  height: 12px;
+  width: 12px;
+  margin: 4px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+  font-size: 10px;
+  border: 2px solid lightslategray;
+  color: lightslategray;
+} */
+
+.right{
+  height: calc(100vh - 60px);
+  width: 40%;
+  background-color: #222831;
+}
+
+.outerRegisters{
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+}
+
+.registers{
+  width: 47%;
+  height: 220px;
+}
+
+.registerPair{
+  height: 40px;
+  margin-bottom: 20px;
+  width: 280px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.registerPair .register{
+  width: 120px;
+  height: 100%;
+  background-color: #1F1F1F;
+  display: flex;
+  color: rgb(221, 221, 221);
+}
+
+.registerPair .registerName{
+  height: 100%;
+  width: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  
+  font-size: 20px;
+  font-family: "Roboto", sans-serif;
+  font-weight: 700;
+  font-style: normal;
+}
+
+.registerPair .registerValue{
+  width: calc(100% - 40px);
+  height: 100%;
+  display: flex;
+  font-size: 18px;
+
+  justify-content: center;
+  align-items: center;
+}
+
+#registerA{
+  background-color: #731DF5;
+}
+
+#registerB, #registerC{
+  background-color: #1D6CF5;
+}
+
+#registerD, #registerE{
+  background-color: #00ADB5;
+}
+
+#registerH, #registerL{
+  background-color: #00B332;
+}
+
+
+.registerHex{
+  width: 180px;
+  height: 40px;
+  display: flex;
+  color: rgb(221, 221, 221);
+  background-color: #1F1F1F;
+  margin-bottom: 20px;
+
+}
+
+.registerHex .registerName{
+  height: 100%;
+  width: 60px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  
+  font-size: 20px;
+  font-family: "Roboto", sans-serif;
+  font-weight: 700;
+  font-style: normal;
+}
+
+.registerHex .registerValue{
+  width: calc(100% - 40px);
+  height: 100%;
+  display: flex;
+  font-size: 18px;
+  justify-content: center;
+  align-items: center;
+}
+
+
+#registerPC{
+  background-color: #F5891D;
+}
+
+
+#registerSP{
+  background-color: #F51D21;
+}
+
+
+.flagRegister{
+  width: 240px;
+  height: 70px;
+  margin-top: 50px;
+  display: flex;
+}
+
+.flag{
+  height: 100%;
+  width: 30px;
+  background-color: #1F1F1F;
+}
+
+
+.flagName{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 30px;
+  font-weight: 700;
+}
+
+
+.flagEven{
+  background-color: #F5A91D;
+}
+.flagOdd{
+  background-color: #F5CA1D;
+}
+
+.flagNone{
+  height: 30px;
+  background-color: #222831;
+  width: 100%;
+}
+
+.flagValue{
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: rgb(221, 221, 221);
+  font-family: "Roboto", sans-serif;
+  font-weight: 700;
+}
+
+
+.outerDisplay{
+  width: 100%;
+  height: 500px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.display{
+  width: calc(100% - 60px);
+  height: 450px;
+  background-color: black;
+  color: white;
+  padding: 10px;
+  overflow-y: scroll;
+  white-space: pre;
+  font-size: 26px;
+  font-family: "VT323", serif;
+  font-weight: 4000;
+  font-style: normal;
+
+}
+
+.display:focus{
+  /* background-color: grey; */
+  outline: none;
+}
+
+.buttons{
+  position: absolute;
+  width: 200px;
+  height: 34px;
+  right: 0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.button{
+  padding-inline: 25px;
+  height: 34px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: rgb(221, 221, 221);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.start{
+  z-index: 100;
+  background-color: #137d31;
+}
+
+.start:hover{
+  background-color: #1b8338;
+}
+
+.step{
+  z-index: 100;
+  background-color: #1753bb;
+}
+
+.step:hover{
+  background-color: #1d5ac3;
+}
+
+
+span{
+  font-weight: 700;
+}
+
+.instruction8bit{
+  color: rgb(61, 129, 238);
+}
+
+.instruction16bit{
+  color: rgb(61, 238, 149);
+}
+
+.instruction8bitArithmetical{
+  color: rgb(179, 91, 247);
+}
+
+.instruction16bitArithmetical{
+  color: rgb(223, 61, 238);
+}
+
+.instructionJumps{
+  color: rgb(61, 200, 238);
+}
+
+.instructionMisc{
+  color: rgb(238, 61, 61);
+}
+
+.argumentOne{
+  color: #924cfa;
+}
+
+.argumentRegisterA{
+  color: #924cfa;
+}
+
+.argumentRegisterB, .argumentRegisterC{
+  color: #1D6CF5;
+}
+
+
+.argumentRegisterD, .argumentRegisterE{
+  color: #00ADB5;
+}
+
+
+.argumentRegisterH, .argumentRegisterL{
+  color: #00B332;
+}
+
+
+
+.argumentTwo{
+  color: rgb(221, 221, 221);
+}
+
+
+.currentLine{
+  /* background-color:rgba(230, 230, 230, 0.176); */
+  
+  width: 600px;
+  outline: 2px solid rgba(230, 230, 230, 0.377);
+
+}
+
+.line{
+  height: 24px;
+  display:inline-block;
+  padding-left: 10px;
+}
+
+.breakPoint{
+  background-color: rgb(74, 26, 26) !important;
+}
+
+.definition{
+  position: absolute;
+  top: 0;
+  left: 70px;
+  background-color: #1F1F1F;
+  padding: 3px;
+  z-index: 99;
+  display: none;
+  color: rgb(184, 184, 184);
+  pointer-events: none;
+}
