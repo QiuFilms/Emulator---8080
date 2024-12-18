@@ -1,5 +1,4 @@
-import { CodeFormatter } from "./CodeFormatter.js";
-import { formatLine } from "./helpers.js"
+import { CodeFormatter } from "./CodeFormatter.js"; 
 
 self.onmessage = (e) => {
     const { chunk, chunkSize, chunksCount } = e.data.workerData;

@@ -29,24 +29,6 @@ export class WorkerManager extends EventTarget{
 
             response = worker.next()
         }
-        // const {chunks, chunkSize} = this.prepareWorkerData(array)
-
-        // for(let [i, chunk] of chunks.entries()){
-        //     const worker = new Worker(workerName, {type:"module"});
-        //     worker.postMessage({ chunk, chunkIndex: i, additionalData:additionalData });
-
-        //     worker.onmessage = (e) => {
-        //         const {chunkIndex, chunk} = e.data
-
-        //         this.dispatchEvent(new CustomEvent('done', {detail: {
-        //             chunkIndex:chunkIndex,
-        //             chunk:chunk,
-        //             chunkSize:chunkSize,
-        //             chunkCount: chunks.length
-        //         }}));
-        //     }
-        // }
-        // }   
     }
 
 

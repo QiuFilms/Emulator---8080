@@ -22,6 +22,8 @@ const Flags = {
 
 
 var document = window.document
+let offsetTop = 0
+let scrollFromTop = 0
 
 export class Processor extends EventTarget{
     static breakPoints = new Set();
@@ -53,17 +55,23 @@ export class Processor extends EventTarget{
         this.dispatchEvent(new Event('running_switchCodeEditorInput'));
     }
 
-
-    ///Init method
-    init({Memory, Labels}){
-        this.Memory = Memory
-        this.Labels = Labels
+    reset(){
+        this.Memory = null
+        this.Labels = null
         this.PC = 2048
         this.FlagReg = structuredClone(Flags)
         this.Registries = structuredClone(Regs)
         this.Ports = new Array()
         this.isPaused = false
         this.isEnd = false
+        this.jump = false
+    }
+
+    ///Init method
+    init({Memory, Labels}){
+        this.reset()
+        this.Memory = Memory
+        this.Labels = Labels
         this.dispatchEvent(new Event('init'));
     }
 
@@ -72,6 +80,7 @@ export class Processor extends EventTarget{
     stepInputListener = (e) => {
         e.stopPropagation()
         e.preventDefault()
+        console.log("stepInputListener");
         this.updateRegisters()
         this.start() 
     }
@@ -81,7 +90,8 @@ export class Processor extends EventTarget{
         e.stopPropagation()
         e.preventDefault()
         this.Registries.A = Utils.DecimalToHex8Bit(e.which)
-
+        
+        
         document.querySelector(".display").blur()
         document.querySelector(".display").textContent += String.fromCharCode(e.which)
         document.querySelector(".display").removeEventListener('keypress', e.target.inputListener)
@@ -93,17 +103,17 @@ export class Processor extends EventTarget{
 
     stepAwaitForLastInputListener = (e) =>{
         e.stopPropagation()
+        e.preventDefault()
+        document.querySelector("body").removeEventListener("keypress", this.stepAwaitForLastInputListener)
 
-        document.querySelector(".display").removeEventListener("keypress", this.stepAwaitForLastInputListener)
-        document.querySelector("textarea").focus()
+        
+        this.dispatchEvent(new Event('stop'));
     }
 
     countinueAfterBreak = (e) => {
         e.stopPropagation()
         e.preventDefault()
-        console.log(this);
         
-        console.log(Processor.breakPoints);
         Processor.breakPoints.delete(this.linePcAssociation[this.PC])
         
         document.body.removeEventListener("keypress", this.countinueAfterBreak)
@@ -111,6 +121,7 @@ export class Processor extends EventTarget{
     }
 
     start(){
+        
         this.dispatchEvent(new Event('start'));
         while(this.PC <= Number(`0x${(Object.keys(this.Memory)).reduce((max, c) => c > max ? c : max)}`)){
             if(!(Utils.DecimalToHex16Bit(this.PC) in this.Memory)){
@@ -124,6 +135,14 @@ export class Processor extends EventTarget{
             if(memCell.length != 1 && memCell[1] in hexOpCodes){
                     this.highlightLine()
                     
+                    if(this.jump){
+                        document.querySelector(".left").scrollTo({
+                            top: offsetTop + scrollFromTop, // Adjust for container's current scroll position
+                            behavior: "smooth",
+                        });
+                        this.jump = false
+                    }
+
                     if(Processor.breakPoints.has(this.PC in this.linePcAssociation ? this.linePcAssociation[this.PC] : -1)){
                         document.querySelector("body").addEventListener("keypress", this.countinueAfterBreak)
                         return
@@ -133,7 +152,6 @@ export class Processor extends EventTarget{
                     this[instruction](hexOpCodes[memCell[1]].split(" ")[1])
 
                     
-                    
                     if(this.isEnd) break
                     if(this.isPaused) return
             } else {
@@ -141,7 +159,6 @@ export class Processor extends EventTarget{
                 continue
             }
             this.updateRegisters()
-
             if(this.isStep && this.PC <= Number(`0x${(Object.keys(this.Memory)).reduce((max, c) => c > max ? c : max)}`)) return
         } 
         //console.log(this.Registries);
@@ -149,14 +166,18 @@ export class Processor extends EventTarget{
         
         
 
-        document.querySelector("body").removeEventListener("keypress", this.stepInputListener)
 
         //console.log(!this.isStep , this.Memory[Utils.DecimalToHex16Bit(Number(`0x${(Object.keys(this.Memory)).reduce((max, c) => c > max ? c : max)}`))][1] != "D7" );
+        console.log(this.isStep || (!this.isStep , this.Memory[Utils.DecimalToHex16Bit(Number(`0x${(Object.keys(this.Memory)).reduce((max, c) => c > max ? c : max)}`))][1] == "D7" ));
         
         if(this.isStep || (!this.isStep , this.Memory[Utils.DecimalToHex16Bit(Number(`0x${(Object.keys(this.Memory)).reduce((max, c) => c > max ? c : max)}`))][1] == "D7" )){
+            console.log("Stp");
+            
             document.querySelector("body").addEventListener("keypress", this.stepAwaitForLastInputListener)
             return
         }
+        //document.querySelector("body").removeEventListener("keypress", this.stepInputListener)
+
         this.dispatchEvent(new Event('stop'));
     }
 
@@ -216,6 +237,7 @@ export class Processor extends EventTarget{
         if(arg == 1){
             document.querySelector(".display").textContent += String.fromCharCode(parseInt(this.Registries.A, 16))
             this.PC++
+            document.querySelector(".display").scrollTo(0, document.querySelector(".display").scrollHeight);
             
             return
         }
@@ -225,6 +247,7 @@ export class Processor extends EventTarget{
             this.PC++
             this.isPaused = true
             document.querySelector(".display").addEventListener("keypress", this.inputListener)
+            document.querySelector(".display").scrollTo(0, document.querySelector(".display").scrollHeight);
             return
         }
 
@@ -234,6 +257,7 @@ export class Processor extends EventTarget{
             while(this.existInMemory(address) != "40"){
                 document.querySelector(".display").textContent += String.fromCharCode(parseInt(this.existInMemory(address),16))
                 address = Utils.DecimalToHex16Bit(Utils.HexToDecimal(address) + 1)
+                document.querySelector(".display").scrollTo(0, document.querySelector(".display").scrollHeight);
             }
             this.PC++
             
@@ -244,10 +268,12 @@ export class Processor extends EventTarget{
         if(arg == 4){
             document.querySelector(".display").textContent += this.Registries.A[0]
             document.querySelector(".display").textContent += this.Registries.A[1]
+            document.querySelector(".display").scrollTo(0, document.querySelector(".display").scrollHeight);
             this.PC++
             
             return
         }
+        
     }
 
     LXI(arg){
@@ -693,14 +719,9 @@ export class Processor extends EventTarget{
         // Scroll the container to the element
         const containerRect = container.getBoundingClientRect();
         const elementRect = element.getBoundingClientRect();
-        const offsetTop = elementRect.top - containerRect.top;
-
-        container.scrollTo({
-            top: offsetTop + container.scrollTop - 50, // Adjust for container's current scroll position
-            behavior: "smooth",
-        });
-        
-
+        offsetTop = elementRect.top - containerRect.top
+        scrollFromTop = container.scrollTop - 50
+        this.jump = true
     }
 
     RET(){
@@ -717,12 +738,9 @@ export class Processor extends EventTarget{
         // });
         const containerRect = container.getBoundingClientRect();
         const elementRect = element.getBoundingClientRect();
-        const offsetTop = elementRect.top - containerRect.top;
-
-        container.scrollTo({
-            top: offsetTop + container.scrollTop - 50, // Adjust for container's current scroll position
-            behavior: "smooth",
-        });
+        offsetTop = elementRect.top - containerRect.top
+        scrollFromTop = container.scrollTop - 50
+        this.jump = true
 
         Stack.IncreamentStack()
         Stack.IncreamentStack()
@@ -819,6 +837,16 @@ export class Processor extends EventTarget{
 
     JMP(){
         this.PC = Utils.HexToDecimal(this.Memory[Utils.DecimalToHex16Bit(this.PC+2)][1] + this.Memory[Utils.DecimalToHex16Bit(this.PC+1)][1])
+        const container = document.querySelector(".left");
+        const element = document.querySelectorAll("pre > span")[this.linePcAssociation[this.PC + 1]];
+
+
+        // Scroll the container to the element
+        const containerRect = container.getBoundingClientRect();
+        const elementRect = element.getBoundingClientRect();
+        offsetTop = elementRect.top - containerRect.top
+        scrollFromTop = container.scrollTop - 50
+        this.jump = true
     }
 
 

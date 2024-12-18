@@ -74,6 +74,7 @@ header{
 footer{
     height: 20px;
     background-color: #222831;
+    z-index: 99;
 }
 
 .left{
@@ -84,6 +85,42 @@ footer{
     overflow-y: scroll;
     position: relative;
     z-index: 99;
+}
+
+.errorMessage{
+  position: fixed;
+  width: calc(500px);
+  left: calc(60% - 520px);
+  padding: 5px;
+  bottom: 40px;
+  height: 40px;
+  bottom: 40px;
+  color: rgb(197, 47, 47);
+  font-family: "Roboto", sans-serif;
+  font-weight: 400;
+  background-color: #181b23;
+  z-index: 98;
+  display: none;
+  animation: slideIn 5s forwards;
+}
+
+
+.errorHighlight{
+  width: 600px;
+  background-color: rgba(97, 26, 26, 0.691);
+}
+
+
+@keyframes slideIn {
+  0% {
+    left: calc(60% + 100px);
+  }
+  10%, 90% {
+    left: calc(60% - 520px);
+  }
+  100%{
+    left: calc(60% + 100px);
+  }
 }
 
 textarea{
@@ -166,6 +203,7 @@ textarea{
   border-radius: 50%;
   font-size: 12px;
   border: 2px solid lightslategray;
+  background-color: #393E46;
   color: lightslategray;
   font-weight: 700;
   cursor: default;
@@ -193,6 +231,7 @@ textarea{
   height: calc(100vh - 60px);
   width: 40%;
   background-color: #222831;
+  z-index: 99;
 }
 
 .outerRegisters{
@@ -366,25 +405,34 @@ textarea{
   background-color: black;
   color: white;
   padding: 10px;
-  overflow-y: scroll;
+  overflow-y: auto;
   white-space: pre;
   font-size: 26px;
   font-family: "VT323", serif;
-  font-weight: 4000;
+  font-weight: 400;
   font-style: normal;
-
 }
 
 .display:focus{
   /* background-color: grey; */
-  outline: none;
+  outline: black;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 100% {
+    border: 2px solid black;
+  }
+  50% {
+    border: 2px solid rgb(57, 57, 57);
+  }
 }
 
 .buttons{
-  position: absolute;
+  position: fixed;
   width: 200px;
   height: 34px;
-  right: 0;
+  left: calc(60% - 210px);
   display: flex;
   justify-content: flex-end;
   align-items: center;
@@ -408,6 +456,16 @@ textarea{
 
 .start:hover{
   background-color: #1b8338;
+}
+
+.stop{
+  display: none;
+  z-index: 100;
+  background-color: #bb3131;
+}
+
+.stop:hover{
+  background-color: #db1c1c;
 }
 
 .step{

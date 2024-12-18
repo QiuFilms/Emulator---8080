@@ -16,6 +16,9 @@ export class Lexer{
     init(program){
         //program = fs.readFileSync(path.join(__dirname, "program.asm"), {encoding: 'utf-8'})
         let programFormatted = program.split("\n")
+        if(program.length == 0){
+            return false
+        }
         programFormatted.forEach((string, index) => programFormatted[index] = string.trim())
         //programFormatted = programFormatted.filter(n => n));
         
@@ -44,9 +47,25 @@ export class Lexer{
                 if((this.current.toUpperCase() in Lexer.prototype || (calls.includes(this.current.toUpperCase()) || jumps.includes(this.current.toUpperCase()))) && letter == ' '){
                     this.linePcAssociation[this.PC+1] = line
                     if((calls.includes(this.current.toUpperCase()) || jumps.includes(this.current.toUpperCase()))){
-                        this.CALL(word.slice(this.current.length).trim())
+                        if(!this.CALL(word.slice(this.current.length).trim())){
+                            return {
+                                status: false,
+                                error: {
+                                    line : index + 1,
+                                    instruction: this.current
+                                }
+                            }
+                        }
                     }else{
-                        this[this.current.toUpperCase()]?.(word.slice(this.current.length).trim())
+                        if(!this[this.current.toUpperCase()]?.(word.slice(this.current.length).trim())){
+                            return {
+                                status: false,
+                                error: {
+                                    line : index + 1,
+                                    instruction: this.current
+                                }
+                            }
+                        }
                     }
                     
                     this.current = ""
@@ -58,7 +77,16 @@ export class Lexer{
                 if(`${this.current}${letter}`.toUpperCase() in Lexer.prototype && (word.trim().length ==`${this.current}${letter}`.length )){
                     this.current = `${this.current}${letter}`.toUpperCase()
                     this.linePcAssociation[this.PC+1] = line
-                    this[this.current]() 
+                    if(!this[this.current]()){
+                        return {
+                            status: false,
+                            error: {
+                                line : index + 1,
+                                instruction: this.current
+                            }
+                        }
+                    }
+                    
                     this.current = ""
                     line++
                     break
@@ -67,7 +95,15 @@ export class Lexer{
                 if(noneArgument.includes(`${this.current}${letter}`.toUpperCase()) && (word.trim().length ==`${this.current}${letter}`.length )){
                     this.current = `${this.current}${letter}`.toUpperCase()
                     this.linePcAssociation[this.PC+1] = line
-                    this.noneArgumentTemplate()
+                    if(!this.noneArgumentTemplate()){
+                        return {
+                            status: false,
+                            error: {
+                                line : index + 1,
+                                instruction: this.current
+                            }
+                        }
+                    }
                     this.current = ""
                     line++
                     break
@@ -79,7 +115,6 @@ export class Lexer{
                 if(letter == ":"){
                     this.PC++
                 
-                    
                     this.Memory[Utils.DecimalToHex16Bit(this.PC)] = [this.current]
                     this.Labels[this.current] = Utils.DecimalToHex16Bit(this.PC)
                     
@@ -99,14 +134,25 @@ export class Lexer{
                     
                     continue
                 }
-                
 
                 this.current += letter
+                                
+                if(this.current.length == word.length && word.length != ""){
+                    return {
+                        status: false,
+                        error: {
+                            line : index + 1,
+                            instruction: null
+                        }
+                    }
+                }
+
             }
         }
         
         this.fillLabelsAdresess()
         return {
+            status: true,
             Memory: this.Memory,
             Labels: this.Labels
         }
@@ -131,6 +177,7 @@ export class Lexer{
     noneArgumentTemplate(){
         this.PC++
         this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)  
+        return true
     }
 
     MOV(args){
@@ -153,7 +200,7 @@ export class Lexer{
 
     MVI(args){
         let pattern = /^([A-E]|[HL]|M)(\s|\t)*,(\s|\t)*((0{0,2}[0-9A-F]{1,2}H)|(((0?[0-2]?[0-5]{1,2}D?)|(0?[0-9]{1,2})))|([01]{1,8}B)|(([0-3]?[0-7]{1,2})(Q|O)))$/i
-        args.trim()
+        
         if(pattern.test(args)){
             args = args.split(",")
             args.forEach((value, index) => args[index] = value.trim().toUpperCase())
@@ -242,6 +289,7 @@ export class Lexer{
                 this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatBytesToMemory(bytes.slice(2, 4))
                 this.PC++
                 this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatBytesToMemory(bytes.slice(0,2))
+                return true
             }
         }
         return false

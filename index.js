@@ -1,4 +1,5 @@
 import { CodeFormatter, regex8Bit } from "./CodeFormatter.js";
+import { Exeption } from "./Exeption.js";
 import { instructionsDefinitions } from "./instructionsDefinitions.js";
 import { Lexer } from "./Lexer.js";
 import { Processor } from "./Processor.js";
@@ -20,17 +21,54 @@ function readASM(){
 
     //document.querySelector(".display").textContent = ""
     const text = document.querySelector("textarea").value
+    document.querySelector(".display").innerText = ""
 
     const lexer = new Lexer()
-    lexer.init(text)
-    console.log(lexer.Memory);
-    
+    const response = lexer.init(text)
+
+    if(!response.status){
+        console.log(response);
+        
+        return new Exeption(response.error.line, response.error.instruction).throw()
+    }
+
+    Exeption.hide()
+
     proc.setLinePcAssociation(lexer.getAssociation())
     Processor.setBreakPoints(breakPoints)
     proc.setWorkType(this).init(lexer)
+    //console.log(proc.Memory);
+    
+    document.querySelector(".start").style.display = "none"
+    document.querySelector(".step").style.display = "none"
+    document.querySelector(".stop").style.display = "flex"
     proc.start()
+    
     //console.log(proc.Memory);
 }
+
+function stopASM(){
+    //proc.reset()
+    
+    document.querySelector(".display").removeEventListener('keypress', proc.inputListener)
+    console.log("Remove listener");
+    
+    document.querySelector("body").removeEventListener('keypress', proc.stepInputListener)
+
+    document.querySelector(".stop").style.display = "none"
+    document.querySelector(".start").style.display = "flex"
+    document.querySelector(".step").style.display = "flex"
+    console.log(document.querySelector(".start").style.display);
+    
+    if(document.querySelector("pre").querySelector(".currentLine")){
+        document.querySelector("pre").querySelectorAll(".currentLine")[0].classList.remove("currentLine")
+    }
+    
+    document.querySelector("textarea").focus()
+    document.querySelector("textarea").style.pointerEvents = ""
+
+}
+window.stopASM = stopASM
 
 proc.addEventListener('running_updateRegisters', (e) => {
     document.querySelector("#registerAvalue").innerText = `${e.target.Registries.A}H`
@@ -63,6 +101,14 @@ proc.addEventListener('running_highLightLine', (e) => {
 })
 
 proc.addEventListener('stop', (e) => {
+    stopASM()
+    // const currentLineHighlight = document.querySelector("pre").querySelectorAll(".currentLine")[0]
+    // document.querySelector("textarea").focus()
+    // document.querySelector("textarea").style.pointerEvents = ""
+    // currentLineHighlight.classList.remove("currentLine")
+})
+
+proc.addEventListener('break', (e) => {
     const currentLineHighlight = document.querySelector("pre").querySelectorAll(".currentLine")[0]
     document.querySelector("textarea").focus()
     document.querySelector("textarea").style.pointerEvents = ""
@@ -70,11 +116,10 @@ proc.addEventListener('stop', (e) => {
 })
 
 proc.addEventListener('init', (e) => {
-    document.querySelector(".display").removeEventListener('keypress', e.target.inputListener)
-    document.querySelector(".display").removeEventListener('keypress', e.target.stepInputListener)
-    
-    if(e.target.isStep) document.querySelector("body").addEventListener("keypress", e.target.stepInputListener) 
-    
+    if(e.target.isStep){
+        console.log("Add listener");
+        document.querySelector("body").addEventListener("keypress", proc.stepInputListener) 
+    } 
 })
 
 proc.addEventListener('running_displayUpdate', (e) => {
@@ -84,6 +129,7 @@ proc.addEventListener('running_displayUpdate', (e) => {
 })
 
 proc.addEventListener('start', (e) => {
+    console.log("start Index");
     if(document.querySelector("textarea").style.pointerEvents != "none") changePointerEvents()
 })
 
@@ -153,9 +199,8 @@ function showDefinition(){
         
         //document.querySelector(".definition").style.display = "block"
         document.querySelector(".definition").innerHTML = `<span class='${instruction.className}'>${instruction.innerText.trim().toUpperCase()}</span> - ${instructionsDefinitions[instruction.innerText.trim().toLowerCase()]}`
-        console.log(instruction.getBoundingClientRect());
-        
-        console.log(row);
+        //console.log(instruction.getBoundingClientRect());
+
         
         document.querySelector(".definition").style.top =  row == 1 ? 26 + "px" : 24 * (row - 1) - 18 + "px" 
         //console.log(24 * (row) - 4 + "px");
@@ -201,6 +246,7 @@ let previousValue = document.querySelector("textarea").value.split("\n");
 
 let isInserted
 document.querySelector("textarea").addEventListener("input", function(e){
+
     isInserted =  e.inputType == "insertFromPaste"
     
     const currentValue = this.value.split("\n");
@@ -211,6 +257,7 @@ document.querySelector("textarea").addEventListener("input", function(e){
 
 document.querySelector("textarea").addEventListener("focus", function(e){
     document.querySelector("pre").querySelectorAll(".currentLine").length == 0 ? null : document.querySelector("pre").querySelectorAll(".currentLine")[0].classList.remove("currentLine")
+    Exeption.hideHighlighAffectedLine()
 })
 
 
@@ -259,7 +306,9 @@ document.querySelector('textarea').addEventListener('keydown', function(e) {
     
         // put caret at right position again
         this.selectionStart =
-        this.selectionEnd = start + 1;
+        this.selectionEnd = start + 1; 
+        simulateInput("input")
+
     }
 })
 
@@ -284,6 +333,7 @@ document.querySelector('textarea').addEventListener('keyup', function(e) {
     }
   });
 
+  
 function auto_grow(element) {
     element.style.height = "0px";
     element.style.height = (element.scrollHeight) - 14 > element.parentElement.clientHeight ? (element.scrollHeight) - 14 + "px" : 0;
@@ -291,3 +341,46 @@ function auto_grow(element) {
 }
 
 
+
+
+document.querySelector(".fileInput").addEventListener("change", function(event) {
+    const file = event.target.files[0];
+    if (file) {
+        console.log("Nazwa pliku:", file.name);
+        console.log("Typ pliku:", file.type);
+
+
+        const reader = new FileReader();
+
+        reader.onload = function (e) {
+            const textarea = document.querySelector("textarea");
+            textarea.value = e.target.result;
+
+            simulateInput("input")
+        
+        };
+
+        reader.onerror = function (e) {
+            console.error("Błąd podczas odczytu pliku:", e.target.error);
+        };
+
+        reader.readAsText(file);
+        
+    }
+});
+
+
+function simulateInput(event){
+    const textarea = document.querySelector("textarea");
+
+    const keyupEvent = new KeyboardEvent(event, {
+        key: "a",
+        code: "KeyA",
+        keyCode: 65, 
+        charCode: 0, 
+        bubbles: true, 
+        cancelable: true 
+    });
+    
+    textarea.dispatchEvent(keyupEvent);
+}

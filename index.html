@@ -21,6 +21,7 @@
 </head>
 <body>
     <header>
+        <input type="file" name="" class="fileInput" accept=".asm, text/plain">
     </header>
     <main>
         <div class="left">
@@ -32,10 +33,14 @@
             <div class="def">?</div>
             <div class="buttons">
                 <div class="start button" onclick="readASM.call(false)">Start</div>
+                <div class="stop button" onclick="stopASM.call()">Stop</div>
                 <div class="step button" onclick="readASM.call(true)">Step</div>
             </div>
             <textarea placeholder="Your code goes here" cols="30" rows="5" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" oninput="auto_grow(this)"></textarea>
             <pre class="formattedCode"></pre>
+            <div class="errorMessage">
+                <p class="text"></p>
+            </div>
         </div>
         <div class="right">
             <div class="outerRegisters">

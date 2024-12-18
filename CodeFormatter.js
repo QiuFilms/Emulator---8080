@@ -4,8 +4,8 @@ export const regex8Bit = /(\s|\t)*(mvi|mov|stax|ldax)(\s|\t)+/i
 const regex16Bit = /^(\s|\t)*(lxi|shld|lhld|pop|push|sphl|xthl|xchg)(\s|\t)+/i
 const regex8BitArithmetical = /^(\s|\t)*(inr|dcr|rlc|ral|daa|stc|rrc|rar|cma|cmc|add|adc|sub|sbb|ana|xra|ora|cmp|adi|sui|ani|ori|aci|sbi|xri|cpi|stc)(\s|\t)+/i
 const regex16BitArithmetical = /^(\s|\t)*(inx|dad|dcx)(\s|\t)+/i
-const regexJumps = /^(\s|\t)*(rnz|rnc|rpo|rp|jnz|jnc|jpo|jp|jmp|cnz|cnc|cpo|cp|rst|rz|rc|rpe|rm|pchl|jz|jc|jpe|cz|cc|cpe|cm|call)(\s|\t)+/i
-const regexMisc = /^(\s|\t)*(hlt|out|in|nop|ret)(\s|\t)*/i
+const regexJumps = /^(\s|\t)*(rnz|rnc|rpo|rp|jnz|jnc|jpo|jp|jmp|cnz|cnc|cpo|cp|rst|rz|rc|rpe|rm|pchl|jz|jc|jpe|cz|cc|cpe|cm|call|out|in)(\s|\t)+/i
+const regexMisc = /^(\s|\t)*(hlt|nop|ret)(\s|\t)*/i
 const args = [/([A-E]|[HL]|M)(\s|\t)*,(\s|\t)*((0{0,2}[0-9A-F]{1,2}H)|(((0?[0-2]?[0-5]{1,2}D?)|(0?[0-9]{1,2})))|([01]{1,8}B)|(([0-3]?[0-7]{1,2})(Q|O)))/i]
 
 
