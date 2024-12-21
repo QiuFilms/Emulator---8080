@@ -51,26 +51,26 @@ export class Utils{
         return Number(`0x${hex}`)
     }
     
-    static Addition8Bit(byte, value, FlagReg, setCY = true){
+    static Addition8Bit(byte, value, FlagRegister, setCY = true){
         let sum = byte + value
         
         if(sum > 255){
             sum -= 256
-            FlagReg.CY = setCY ? 1 : FlagReg.CY
-            FlagReg.AC = 1
+            FlagRegister.setCarry(setCY ? 1 : FlagRegister.getCarry())
+            FlagRegister.setAuxillaryCarry(1)
     
         }else if(sum >= 16 && byte < 16){
-            FlagReg.CY = setCY ? 0 : FlagReg.CY
-            FlagReg.AC = 1
+            FlagRegister.setCarry(setCY ? 0 : FlagRegister.getCarry())
+            FlagRegister.setAuxillaryCarry(1)
     
         }else if(sum < 16){
-            FlagReg.CY = setCY ? 0 : FlagReg.CY
-            FlagReg.AC = 0
+            FlagRegister.setCarry(setCY ? 0 : FlagRegister.getCarry())
+            FlagRegister.setAuxillaryCarry(0)
         }
     
-        FlagReg.Z = sum == 0 ? 1 : 0;
-        FlagReg.P = this.checkParity(sum)
-        FlagReg.S = FlagReg.CY && FlagReg.S ? this.negate(FlagReg.S) : FlagReg.S
+        FlagRegister.setZero(sum == 0 ? 1 : 0)
+        FlagRegister.setParity(this.checkParity(sum))
+        FlagRegister.setSign(FlagRegister.getCarry() && FlagRegister.getSign() ? this.negate(FlagRegister.getSign()) : FlagRegister.getSign())
         return this.DecimalToHex8Bit(sum)
     }
     
@@ -97,26 +97,26 @@ export class Utils{
     
     
     
-    static Substraction8Bit(byte, value, FlagReg, setCY = true){
+    static Substraction8Bit(byte, value, FlagRegister, setCY = true){
         let sub = byte - value 
     
         if(sub < 0){
             sub += 256
-            FlagReg.CY = setCY ? 1 : FlagReg.CY
-            FlagReg.AC = 1
+            FlagRegister.setCarry(setCY ? 1 : FlagRegister.getCarry())
+            FlagRegister.setAuxillaryCarry(1)
             
         }else if(sub < 16 && byte >= 16){
-            FlagReg.CY = setCY ? 0 : FlagReg.CY
-            FlagReg.AC = 1
+            FlagRegister.setCarry(setCY ? 0 : FlagRegister.getCarry())
+            FlagRegister.setAuxillaryCarry(1)
     
         }else if(sub >= 16){
-            FlagReg.CY = setCY ? 0 : FlagReg.CY
-            FlagReg.AC = 0
+            FlagRegister.setCarry(setCY ? 0 : FlagRegister.getCarry())
+            FlagRegister.setAuxillaryCarry(0)
         }
     
-        FlagReg.Z = sub == 0 ? 1 : 0;
-        FlagReg.P = this.checkParity(sub)
-        FlagReg.S = FlagReg.CY && !FlagReg.S ? this.negate(FlagReg.S) : FlagReg.S
+        FlagRegister.setZero(sub == 0 ? 1 : 0)
+        FlagRegister.setParity(this.checkParity(sub))
+        FlagRegister.setSign(FlagRegister.getCarry() && !FlagRegister.getSign() ? this.negate(FlagRegister.getSign()) : FlagRegister.getSign())
         return this.DecimalToHex8Bit(sub)
     }
     
@@ -139,8 +139,8 @@ export class Utils{
         return [byte + "H", byte]
     }
     
-    static formatNumberToHex8Bit(number){
-        let system = number[number.length - 1].toUpperCase()
+    static formatNumberToHex8Bit(number){ 
+        let system = number.toString().at(-1).toUpperCase()
 
         if(system == "H"){
             return this.Hex8Bit(number)
@@ -157,13 +157,13 @@ export class Utils{
         if(system == "D"){
             return this.DecimalToHex8Bit(parseInt(number.slice(0, -1)))
         }else{
-    
             return this.DecimalToHex8Bit(parseInt(number))
         }
     }
     
     static formatNumberToHex16Bit(number){
-        let system = number[number.length - 1]
+        let system = number.toString().at(-1).toUpperCase()
+        
         if(system == "H"){
             return this.Hex16Bit(number)
         }

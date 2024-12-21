@@ -1,3 +1,5 @@
+import { Memory } from "./Processor/Memory.js"
+import { ProgramCounter } from "./Processor/ProgramCounter.js"
 import { Utils } from "./utils.js"
 const noneArgument = ["RLC", "RAL", "RRC", "RAR", "DAA", "STC", "HLT", "CMA", "CMC", "RET", "RNZ", "RNC", "RPO","RP", "RZ", "RC", "RPE", "RM", "XTHL", "XCHG", "DI", "EI"]
 
@@ -5,15 +7,20 @@ const calls = ["CNZ", "CNC", "CPO","CP", "CZ", "CC", "CPE", "CM", "CALL"]
 const jumps = ["JNZ", "JNC", "JPO","JP", "JZ", "JC", "JPE", "JM", "JMP"]
 
 export class Lexer{
-    PC = 2047
-    Memory = {}
+    //PC = 2047
+    ProgramCounter = new ProgramCounter(-1)
+    //Memory = {}
+    
     Labels = {}
     LabelsToFill = new Array()
     current = ""
-    formatted = []
     linePcAssociation = {}
     
-    init(program){
+    constructor(memory){
+        this.Memory = memory
+    }
+
+    parse(program){
         //program = fs.readFileSync(path.join(__dirname, "program.asm"), {encoding: 'utf-8'})
         let programFormatted = program.split("\n")
         if(program.length == 0){
@@ -43,9 +50,10 @@ export class Lexer{
             this.current = ""
             for (let j = 0; j < word.length; j++) {
                 let letter = word[j]
-                
+
                 if((this.current.toUpperCase() in Lexer.prototype || (calls.includes(this.current.toUpperCase()) || jumps.includes(this.current.toUpperCase()))) && letter == ' '){
-                    this.linePcAssociation[this.PC+1] = line
+                    this.linePcAssociation[this.ProgramCounter.get()+1] = line
+
                     if((calls.includes(this.current.toUpperCase()) || jumps.includes(this.current.toUpperCase()))){
                         if(!this.CALL(word.slice(this.current.length).trim())){
                             return {
@@ -76,7 +84,8 @@ export class Lexer{
                 
                 if(`${this.current}${letter}`.toUpperCase() in Lexer.prototype && (word.trim().length ==`${this.current}${letter}`.length )){
                     this.current = `${this.current}${letter}`.toUpperCase()
-                    this.linePcAssociation[this.PC+1] = line
+                    
+                    this.linePcAssociation[this.ProgramCounter.get()+1] = line
                     if(!this[this.current]()){
                         return {
                             status: false,
@@ -94,7 +103,7 @@ export class Lexer{
 
                 if(noneArgument.includes(`${this.current}${letter}`.toUpperCase()) && (word.trim().length ==`${this.current}${letter}`.length )){
                     this.current = `${this.current}${letter}`.toUpperCase()
-                    this.linePcAssociation[this.PC+1] = line
+                    this.linePcAssociation[this.ProgramCounter.get()+1] = line
                     if(!this.noneArgumentTemplate()){
                         return {
                             status: false,
@@ -113,11 +122,11 @@ export class Lexer{
                 
                 
                 if(letter == ":"){
-                    this.PC++
+                    this.ProgramCounter.add(1)
                 
-                    this.Memory[Utils.DecimalToHex16Bit(this.PC)] = [this.current]
-                    this.Labels[this.current] = Utils.DecimalToHex16Bit(this.PC)
-                    
+                    //this.Memory[this.ProgramCounter.toHex()] = [this.current]
+                    this.Memory.writeLabel(this.ProgramCounter.get(), this.current)
+                    this.Labels[this.current] = this.ProgramCounter.toHex()
                     
                     let rest = word.slice(this.current.length + 1).trim()
                     
@@ -127,8 +136,6 @@ export class Lexer{
                         break
                     }
 
-                    
-                    
                     word = rest
                     j = -1
                     
@@ -136,8 +143,23 @@ export class Lexer{
                 }
 
                 this.current += letter
-                                
-                if(this.current.length == word.length && word.length != ""){
+                            
+                
+                if(Object.keys(this.Memory.return()).length == 0 && this.current.toUpperCase() === "ORG"){
+                    if(!this.ORG(word.slice(this.current.length).trim())){
+                        return {
+                            status: false,
+                            error: {
+                                line : index + 1,
+                                instruction: this.current
+                            }
+                        }
+                    }
+                    line++
+                    break
+                }
+
+                if(this.current.length == word.length && word != ""){
                     return {
                         status: false,
                         error: {
@@ -149,7 +171,7 @@ export class Lexer{
 
             }
         }
-        
+
         this.fillLabelsAdresess()
         return {
             status: true,
@@ -169,17 +191,42 @@ export class Lexer{
             let pc = label[0]
             let bytes = Utils.DecimalToHex16Bit(this.Labels[label[1]])
             
-            this.Memory[Utils.DecimalToHex16Bit(pc)] = Utils.formatBytesToMemory(bytes.slice(2))
-            this.Memory[Utils.DecimalToHex16Bit(pc + 1)] = Utils.formatBytesToMemory(bytes.slice(0,2))
+
+            this.Memory.writeByte(pc, bytes.slice(2))
+            this.Memory.writeByte(pc + 1, bytes.slice(0, 2))
+
+            //this.Memory[Utils.DecimalToHex16Bit(pc)] = Utils.formatBytesToMemory(bytes.slice(2))
+            //this.Memory[Utils.DecimalToHex16Bit(pc + 1)] = Utils.formatBytesToMemory(bytes.slice(0,2))
         }
     }
 
+    getOrigin(){
+        return this.ProgramCounter.getOrigin()
+    }
+
     noneArgumentTemplate(){
-        this.PC++
-        this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)  
+        this.ProgramCounter.add(1)
+        //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)  
+        this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
         return true
     }
 
+    ORG(arg){
+        let pattern = /(([0-9A-F]{1,4}H)|((((([0-5]?\d{1,4})|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5])D?)|(0?[0-9]{1,2})))|([01]{1,16}B)|(([0-3]?[0-7]{1,2})(Q|O)))/i
+        arg = arg.trim() 
+
+        console.log(pattern.test(pattern));
+        
+        if(pattern.test(pattern)){
+            this.ProgramCounter.setOrigin(Utils.HexToDecimal(Utils.formatNumberToHex16Bit(arg).join("")) - 1) 
+
+            this.getOrigin = () => this.ProgramCounter.getOrigin() + 1
+            return true
+        }
+
+        return false
+    }
+    
     MOV(args){
         const pattern = /^([A-E]|[HL]|[M])(\s|\t)*,(\s|\t)*([A-E]|[HL]|[M])$/i
         if(pattern.test(args)){
@@ -190,9 +237,10 @@ export class Lexer{
             }
 
             this.current += ` ${args.join(",")}`
-            this.PC++
+            this.ProgramCounter.add(1)
             this.current = this.current.toUpperCase()
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)
+            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
             return true
         }
         return false
@@ -207,12 +255,14 @@ export class Lexer{
             
             const byte = Utils.formatNumberToHex8Bit(args[1])
 
-            this.PC++
+            this.ProgramCounter.add(1)
             this.current += ` ${args[0]}`
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)
+            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
+            this.ProgramCounter.add(1)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatBytesToMemory(byte)
+            this.Memory.writeByte(this.ProgramCounter.get(), byte)
 
-            this.PC++
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatBytesToMemory(byte)
             return true
         }
 
@@ -226,12 +276,15 @@ export class Lexer{
             
             const byte = Utils.DecimalToHex8Bit(Number(args[1].charCodeAt(1)))
 
-            this.PC++
+            this.ProgramCounter.add(1)
             this.current += ` ${args[0].toUpperCase()}`
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)
+            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
 
-            this.PC++
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatBytesToMemory(byte)
+            this.ProgramCounter.add(1)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatBytesToMemory(byte)
+            this.Memory.writeByte(this.ProgramCounter.get(), byte)
+
             return true
         }  
         return false
@@ -241,9 +294,11 @@ export class Lexer{
         let pattern = /^[0-7]{1}$/
         
         if(pattern.test(arg)){
-            this.PC++
+            this.ProgramCounter.add(1)
             this.current += ` ${arg}`
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)
+            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
+            
             return true
         }
         return false
@@ -258,14 +313,19 @@ export class Lexer{
             args.forEach((value, index) => args[index] = value.trim().toUpperCase())
             const bytes = Utils.formatNumberToHex16Bit(args[1])
             
-            this.PC++
+            this.ProgramCounter.add(1)
             this.current += ` ${args[0]}`
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)
+            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
             
-            this.PC++
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatBytesToMemory(bytes[1])
-            this.PC++
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatBytesToMemory(bytes[0])
+            this.ProgramCounter.add(1)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatBytesToMemory(bytes[1])
+            this.Memory.writeByte(this.ProgramCounter.get(), bytes[1])
+
+            this.ProgramCounter.add(1)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatBytesToMemory(bytes[0])
+            this.Memory.writeByte(this.ProgramCounter.get(), bytes[0])
+
             return true
         }   
 
@@ -275,20 +335,26 @@ export class Lexer{
             args.forEach((value, index) => args[index] = value.trim())
             args[0] = args[0].toUpperCase()
 
-            this.PC++
+            this.ProgramCounter.add(1)
             this.current += ` ${args[0]}`
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)
+            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
+
             if(!(args[1] in this.Labels)){
-                this.LabelsToFill.push([this.PC+1, args[1]])
-                this.PC += 2
+                this.LabelsToFill.push([this.ProgramCounter.get()+1, args[1]])
+                this.ProgramCounter.add(2)
                 return true
             }else{
                 const bytes = this.Labels[args[1]]
                 
-                this.PC++
-                this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatBytesToMemory(bytes.slice(2, 4))
-                this.PC++
-                this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatBytesToMemory(bytes.slice(0,2))
+                this.ProgramCounter.add(1)
+                //this.Memory[this.ProgramCounter.toHex()] = Utils.formatBytesToMemory(bytes.slice(2, 4))
+                this.Memory.writeByte(this.ProgramCounter.get(), bytes.slice(2, 4))
+
+                this.ProgramCounter.add(1)
+                //this.Memory[this.ProgramCounter.toHex()] = Utils.formatBytesToMemory(bytes.slice(0,2))
+                this.Memory.writeByte(this.ProgramCounter.get(), bytes.slice(0,2))
+
                 return true
             }
         }
@@ -300,9 +366,11 @@ export class Lexer{
         arg = arg.trim().toUpperCase()
     
         if(pattern.test(arg)){
-            this.PC++
+            this.ProgramCounter.add(1)
             this.current += ` ${arg}`
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)
+            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
+
             return true
         }
         return false
@@ -315,12 +383,18 @@ export class Lexer{
         if(pattern.test(arg)){
             const bytes = Utils.formatNumberToHex16Bit(arg)
     
-            this.PC++
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)
-            this.PC++
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatBytesToMemory(bytes[1])
-            this.PC++
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatBytesToMemory(bytes[0])
+            this.ProgramCounter.add(1)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)
+            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
+
+            this.ProgramCounter.add(1)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatBytesToMemory(bytes[1])
+            this.Memory.writeByte(this.ProgramCounter.get(), bytes[1])
+
+            this.ProgramCounter.add(1)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatBytesToMemory(bytes[0])
+            this.Memory.writeByte(this.ProgramCounter.get(), bytes[0])
+
             return true
         }
         return false
@@ -333,12 +407,18 @@ export class Lexer{
         if(pattern.test(arg)){
             const bytes = Utils.formatNumberToHex16Bit(arg)
     
-            this.PC++
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)
-            this.PC++
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatBytesToMemory(bytes[1])
-            this.PC++
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatBytesToMemory(bytes[0])
+            this.ProgramCounter.add(1)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)
+            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
+
+            this.ProgramCounter.add(1)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatBytesToMemory(bytes[1])
+            this.Memory.writeByte(this.ProgramCounter.get(), bytes[1])
+
+            this.ProgramCounter.add(1)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatBytesToMemory(bytes[0])
+            this.Memory.writeByte(this.ProgramCounter.get(), bytes[0])
+
             return true
         }
         return false
@@ -350,9 +430,11 @@ export class Lexer{
         arg = arg.trim()
     
         if(pattern.test(arg)){
-            this.PC++
+            this.ProgramCounter.add(1)
             this.current += ` ${arg}`
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)
+            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
+
             return true
         }
         return false
@@ -364,9 +446,11 @@ export class Lexer{
         arg = arg.trim()
     
         if(pattern.test(arg)){
-            this.PC++
+            this.ProgramCounter.add(1)
             this.current += ` ${arg}`
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)
+            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
+
             return true
         }
         return false
@@ -378,9 +462,11 @@ export class Lexer{
         arg = arg.trim()
     
         if(pattern.test(arg)){
-            this.PC++
+            this.ProgramCounter.add(1)
             this.current += ` ${arg}`
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)
+            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
+
             return true
         }
         return false
@@ -392,9 +478,11 @@ export class Lexer{
         arg = arg.trim()
     
         if(pattern.test(arg)){
-            this.PC++
+            this.ProgramCounter.add(1)
             this.current += ` ${arg}`
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)
+            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
+
             return true
         }
         return false
@@ -402,40 +490,40 @@ export class Lexer{
 
 
     // RLC(){
-    //     this.PC++
-    //     this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)  
+    //     this.ProgramCounter.add(1)
+    //     this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)  
     // }
 
 
     // RAL(){
-    //     this.PC++
-    //     this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)  
+    //     this.ProgramCounter.add(1)
+    //     this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)  
     // }
 
     // RRC(){
-    //     this.PC++
-    //     this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)  
+    //     this.ProgramCounter.add(1)
+    //     this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)  
     // }
 
 
     // RAR(){
-    //     this.PC++
-    //     this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)  
+    //     this.ProgramCounter.add(1)
+    //     this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)  
     // }
 
     // DAA(){
-    //     this.PC++
-    //     this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current) 
+    //     this.ProgramCounter.add(1)
+    //     this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current) 
     // }
 
     // STC(){
-    //     this.PC++
-    //     this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)
+    //     this.ProgramCounter.add(1)
+    //     this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)
     // }
 
     // HLT(){
-    //     this.PC++
-    //     this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)
+    //     this.ProgramCounter.add(1)
+    //     this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)
     // }
 
     DAD(arg){
@@ -443,9 +531,11 @@ export class Lexer{
         arg = arg.trim()
     
         if(pattern.test(arg)){
-            this.PC++
+            this.ProgramCounter.add(1)
             this.current += ` ${arg}`
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current) 
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current) 
+            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
+
             return true
         }
         return false
@@ -457,9 +547,11 @@ export class Lexer{
         const pattern = /^([BD])$/i
     
         if(pattern.test(arg)){
-            this.PC++
+            this.ProgramCounter.add(1)
             this.current += ` ${arg}`
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current) 
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current) 
+            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
+
             return true
         }
         return false
@@ -473,12 +565,18 @@ export class Lexer{
         if(pattern.test(arg)){
             const bytes = Utils.formatNumberToHex16Bit(arg)
     
-            this.PC++
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)
-            this.PC++
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatBytesToMemory(bytes[1])
-            this.PC++
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatBytesToMemory(bytes[0])
+            this.ProgramCounter.add(1)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)
+            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
+
+            this.ProgramCounter.add(1)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatBytesToMemory(bytes[1])
+            this.Memory.writeByte(this.ProgramCounter.get(), bytes[1])
+
+            this.ProgramCounter.add(1)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatBytesToMemory(bytes[0])
+            this.Memory.writeByte(this.ProgramCounter.get(), bytes[0])
+
             return true
         }
         return false
@@ -493,12 +591,18 @@ export class Lexer{
             const bytes = Utils.formatNumberToHex16Bit(arg)
             Registries.A = bytes.join("") in Memory ? Memory[bytes.join("")][1] : "00"
     
-            this.PC++
-            this.Memory[Utils.DecimalToHex16Bit(pc)] = Utils.formatInstructionToMemory(this.current)
-            this.PC++
-            this.Memory[Utils.DecimalToHex16Bit(pc)] = Utils.formatBytesToMemory(bytes[1])
-            this.PC++
-            this.Memory[Utils.DecimalToHex16Bit(pc)] = Utils.formatBytesToMemory(bytes[0])
+            this.ProgramCounter.add(1)
+            //this.Memory[Utils.DecimalToHex16Bit(pc)] = Utils.formatInstructionToMemory(this.current)
+            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
+
+            this.ProgramCounter.add(1)
+            //this.Memory[Utils.DecimalToHex16Bit(pc)] = Utils.formatBytesToMemory(bytes[1])
+            this.Memory.writeByte(this.ProgramCounter.get(), bytes[1])
+
+            this.ProgramCounter.add(1)
+            //this.Memory[Utils.DecimalToHex16Bit(pc)] = Utils.formatBytesToMemory(bytes[0])
+            this.Memory.writeByte(this.ProgramCounter.get(), bytes[0])
+
             return true
         }
         return false
@@ -511,9 +615,11 @@ export class Lexer{
         const pattern = /^([A-E]|H|L|M)$/i
     
         if(pattern.test(arg)){
-            this.PC++
+            this.ProgramCounter.add(1)
             this.current += ` ${arg}`
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)
+            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
+
             return true
         }
         return false
@@ -525,9 +631,11 @@ export class Lexer{
         const pattern = /^([A-E]|H|L|M)$/i
     
         if(pattern.test(arg)){
-            this.PC++
+            this.ProgramCounter.add(1)
             this.current += ` ${arg}`
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)
+            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
+
             return true
         }
         return false
@@ -535,15 +643,15 @@ export class Lexer{
 
 
     SUB(arg){
-        console.log(123123);
-        
         arg = arg.trim()
         const pattern = /^([A-E]|H|L|M)$/i
     
         if(pattern.test(arg)){
-            this.PC++
+            this.ProgramCounter.add(1)
             this.current += ` ${arg}`
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)
+            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
+
             return true
         }
         return false
@@ -555,9 +663,11 @@ export class Lexer{
         const pattern = /^([A-E]|H|L|M)$/i
     
         if(pattern.test(arg)){
-            this.PC++
+            this.ProgramCounter.add(1)
             this.current += ` ${arg}`
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)
+            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
+
             return true
         }
         return false
@@ -568,9 +678,11 @@ export class Lexer{
         const pattern = /^([A-E]|H|L|M)$/i
 
         if(pattern.test(arg)){
-            this.PC++
+            this.ProgramCounter.add(1)
             this.current += ` ${arg}`
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)
+            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
+
             return true
         }
         return false
@@ -581,9 +693,11 @@ export class Lexer{
         const pattern = /^([A-E]|H|L|M)$/i
 
         if(pattern.test(arg)){
-            this.PC++
+            this.ProgramCounter.add(1)
             this.current += ` ${arg}`
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)
+            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
+
             return true
         }
         return false
@@ -594,9 +708,11 @@ export class Lexer{
         const pattern = /^([A-E]|H|L|M)$/i
 
         if(pattern.test(arg)){
-            this.PC++
+            this.ProgramCounter.add(1)
             this.current += ` ${arg}`
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)
+            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
+
             return true
         }
         return false
@@ -607,22 +723,24 @@ export class Lexer{
         const pattern = /^([A-E]|H|L|M)$/i
 
         if(pattern.test(arg)){
-            this.PC++
+            this.ProgramCounter.add(1)
             this.current += ` ${arg}`
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)
+            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
+
             return true
         }
         return false
     }
 
     // CMA(){
-    //     this.PC++
-    //     this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)  
+    //     this.ProgramCounter.add(1)
+    //     this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)  
     // }
 
     // CMC(){
-    //     this.PC++
-    //     this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)  
+    //     this.ProgramCounter.add(1)
+    //     this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)  
     // }
 
     CALL(arg){
@@ -630,20 +748,26 @@ export class Lexer{
         let pattern = /^.*$/
 
         if(pattern.test(arg)){
-            this.PC++
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)
+            this.ProgramCounter.add(1)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)
+            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
+
             
             if(!(arg in this.Labels)){
-                this.LabelsToFill.push([this.PC+1, arg])
-                this.PC += 2
+                this.LabelsToFill.push([this.ProgramCounter.get()+1, arg])
+                this.ProgramCounter.add(2)
                 return true
             }else{
                 const bytes = this.Labels[arg]
                 
-                this.PC++
-                this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatBytesToMemory(bytes.slice(2, 4))
-                this.PC++
-                this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatBytesToMemory(bytes.slice(0,2))
+                this.ProgramCounter.add(1)
+                //this.Memory[this.ProgramCounter.toHex()] = Utils.formatBytesToMemory(bytes.slice(2, 4))
+                this.Memory.writeByte(this.ProgramCounter.get(), bytes.slice(2, 4))
+
+                this.ProgramCounter.add(1)
+                //this.Memory[this.ProgramCounter.toHex()] = Utils.formatBytesToMemory(bytes.slice(0,2))
+                this.Memory.writeByte(this.ProgramCounter.get(), bytes.slice(0,2))
+
             }
             
             
@@ -655,25 +779,31 @@ export class Lexer{
         if(pattern.test(arg)){
             const bytes = Utils.formatNumberToHex16Bit(arg)
 
-            this.PC++
-            this.Memory[Utils.DecimalToHex16Bit(pc)] = Utils.formatInstructionToMemory(this.current)
-            this.PC++
-            this.Memory[Utils.DecimalToHex16Bit(pc)] = Utils.formatBytesToMemory(bytes[1])
-            this.PC++
-            this.Memory[Utils.DecimalToHex16Bit(pc)] = Utils.formatBytesToMemory(bytes[0])
+            this.ProgramCounter.add(1)
+            //this.Memory[Utils.DecimalToHex16Bit(pc)] = Utils.formatInstructionToMemory(this.current)
+            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
+
+            this.ProgramCounter.add(1)
+            //this.Memory[Utils.DecimalToHex16Bit(pc)] = Utils.formatBytesToMemory(bytes[1])
+            this.Memory.writeByte(this.ProgramCounter.get(), bytes[1])
+
+            this.ProgramCounter.add(1)
+            //this.Memory[Utils.DecimalToHex16Bit(pc)] = Utils.formatBytesToMemory(bytes[0])
+            this.Memory.writeByte(this.ProgramCounter.get(), bytes[0])
+
             return true
         }
         return false
     }
     
     // RET(){
-    //     this.PC++
-    //     this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)  
+    //     this.ProgramCounter.add(1)
+    //     this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)  
     // }
 
     // RNZ(){
-    //     this.PC++
-    //     this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)  
+    //     this.ProgramCounter.add(1)
+    //     this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)  
     // }
 
 
@@ -682,9 +812,11 @@ export class Lexer{
         const pattern = /^([BDH]|PSW)$/i
 
         if(pattern.test(arg)){
-            this.PC++
+            this.ProgramCounter.add(1)
             this.current += ` ${arg}`
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)  
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)  
+            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
+
         }
     }
 
@@ -693,9 +825,11 @@ export class Lexer{
         const pattern = /^([BDH]|PSW)$/i
 
         if(pattern.test(arg)){
-            this.PC++
+            this.ProgramCounter.add(1)
             this.current += ` ${arg}`
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)  
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)  
+            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
+
         }
     }
 
@@ -704,11 +838,15 @@ export class Lexer{
         let pattern = /^((0{0,2}[0-9A-F]{1,2}H)|(((0?[0-2]?[0-5]{1,2}D?)|(0?[0-9]{1,2})))|([01]{1,8}B)|(([0-3]?[0-7]{1,2})(Q|O)))$/i
         
         if(pattern.test(arg)){
-            this.PC++
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)
-            this.PC++
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatBytesToMemory(Utils.formatNumberToHex8Bit(arg))
+            this.ProgramCounter.add(1)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)
+            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
+
+            this.ProgramCounter.add(1)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatBytesToMemory(Utils.formatNumberToHex8Bit(arg))
+            this.Memory.writeByte(this.ProgramCounter.get(), Utils.formatNumberToHex8Bit(arg))
             return true
+            
         }
         return false
     }
@@ -730,6 +868,10 @@ export class Lexer{
         return this.addTwoBytesToMemory(arg)
     }
 
+    ANI(arg){
+        return this.addTwoBytesToMemory(arg)
+    }
+
     XRI(arg){
         return this.addTwoBytesToMemory(arg)
     }
@@ -745,10 +887,14 @@ export class Lexer{
     OUT(arg){
         let pattern = /^((0{0,2}[0-9A-F]{1,2}H)|(((0?[0-2]?[0-5]{1,2}D?)|(0?[0-9]{1,2})))|([01]{1,8}B)|(([0-3]?[0-7]{1,2})(Q|O)))$/i
         if(pattern){
-            this.PC++
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatInstructionToMemory(this.current)
-            this.PC++
-            this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatBytesToMemory(Utils.formatNumberToHex8Bit(arg))
+            this.ProgramCounter.add(1)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)
+            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
+
+            this.ProgramCounter.add(1)
+            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatBytesToMemory(Utils.formatNumberToHex8Bit(arg))
+            this.Memory.writeByte(this.ProgramCounter.get(), arg)
+
             return true
         }
         return false
@@ -762,11 +908,12 @@ export class Lexer{
 
         for(let i = 0; i < arg.length; i++) {
             const value = arg[i].trim()
-            console.log(value);
+            
             
             if(patternNum.test(value)){
-                this.PC++
-                this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatBytesToMemory(Utils.formatNumberToHex8Bit(value))
+                this.ProgramCounter.add(1)
+                //this.Memory[this.ProgramCounter.toHex()] = Utils.formatBytesToMemory(Utils.formatNumberToHex8Bit(value))
+                this.Memory.writeByte(this.ProgramCounter.get(), Utils.formatNumberToHex8Bit(value))
                 
                 continue
             }
@@ -775,8 +922,10 @@ export class Lexer{
                 for (let j = 1; j < value.length-1; j++) {
                     const letter = value[j];
                       
-                    this.PC++
-                    this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatBytesToMemory(Utils.DecimalToHex8Bit(Number(letter.charCodeAt(0))))
+                    this.ProgramCounter.add(1)
+                    //this.Memory[this.ProgramCounter.toHex()] = Utils.formatBytesToMemory(Utils.DecimalToHex8Bit(Number(letter.charCodeAt(0))))
+                    this.Memory.writeByte(this.ProgramCounter.get(), Utils.formatNumberToHex8Bit(Number(letter.charCodeAt(0))))
+
                 }
                 continue
             }
@@ -785,8 +934,10 @@ export class Lexer{
                 for (let j = 0; j <= value.length-1; j++) {
                     const letter = value[j];
                       
-                    this.PC++
-                    this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatBytesToMemory(Utils.DecimalToHex8Bit(Number(letter.charCodeAt(0))))
+                    this.ProgramCounter.add(1)
+                    //this.Memory[this.ProgramCounter.toHex()] = Utils.formatBytesToMemory(Utils.DecimalToHex8Bit(Number(letter.charCodeAt(0))))
+                    this.Memory.writeByte(this.ProgramCounter.get(), Utils.formatNumberToHex8Bit(Number(letter.charCodeAt(0))))
+
                 }
             }
             return false
@@ -805,10 +956,14 @@ export class Lexer{
             
             if(patternNum.test(value)){
                 const bytes = Utils.formatNumberToHex16Bit(value)
-                this.PC++
-                this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatBytesToMemory(bytes[1])
-                this.PC++
-                this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatBytesToMemory(bytes[0])
+                this.ProgramCounter.add(1)
+                //this.Memory[this.ProgramCounter.toHex()] = Utils.formatBytesToMemory(bytes[1])
+                this.Memory.writeByte(this.ProgramCounter.get(), bytes[1])
+
+                this.ProgramCounter.add(1)
+                //this.Memory[this.ProgramCounter.toHex()] = Utils.formatBytesToMemory(bytes[0])
+                this.Memory.writeByte(this.ProgramCounter.get(), bytes[0])
+
                 
                 continue
             }
@@ -817,8 +972,10 @@ export class Lexer{
                 for (let j = 1; j < value.length-1; j++) {
                     const letter = value[j];
                       
-                    this.PC++
-                    this.Memory[Utils.DecimalToHex16Bit(this.PC)] = Utils.formatBytesToMemory(Utils.DecimalToHex8Bit(Number(letter.charCodeAt(0))))
+                    this.ProgramCounter.add(1)
+                    //this.Memory[this.ProgramCounter.toHex()] = Utils.formatBytesToMemory(Utils.DecimalToHex8Bit(Number(letter.charCodeAt(0))))
+                    this.Memory.writeByte(this.ProgramCounter.get(),Utils.formatNumberToHex8Bit(Number(letter.charCodeAt(0))))
+
                 }
                 continue
             }

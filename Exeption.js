@@ -5,13 +5,17 @@ export class Exeption{
     }
 
     throw(){
-        document.querySelector(".errorMessage").style.display = "block"
-
         if(this.instruction === null){
             document.querySelector(".errorMessage").innerText = `Error at line ${this.line}: The instruction does not exist.`
         }else{
             document.querySelector(".errorMessage").innerText = `Error at line ${this.line}: The arguments does not corespond to the arguments required by instruction ${this.instruction.toUpperCase()}.`
         }
+
+        const errorMessage = document.querySelector(".errorMessage")
+        errorMessage.classList.remove("errorMessageSlideOut");
+        errorMessage.classList.add("errorMessageSlideIn");
+        
+
         this.showHighlighAffectedLine()
     }
 
@@ -27,7 +31,12 @@ export class Exeption{
     }
 
     static hide(){
-        document.querySelector(".errorMessage").style.display = "none"
+        const errorMessage = document.querySelector(".errorMessage")
+        if(errorMessage.classList.contains("errorMessageSlideIn")){
+            errorMessage.classList.remove("errorMessageSlideIn");
+            errorMessage.classList.add("errorMessageSlideOut");
+        }
+
         this.hideHighlighAffectedLine()
     }
 }

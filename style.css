@@ -34,6 +34,13 @@
     font-style: normal;
   }
 
+  .share-tech-mono-regular {
+    font-family: "Share Tech Mono", serif;
+    font-weight: 400;
+    font-style: normal;
+  }
+
+
 *{
     margin: 0;
     padding: 0;
@@ -90,7 +97,7 @@ footer{
 .errorMessage{
   position: fixed;
   width: calc(500px);
-  left: calc(60% - 520px);
+  left: calc(60% + 100px);
   padding: 5px;
   bottom: 40px;
   height: 40px;
@@ -99,11 +106,16 @@ footer{
   font-family: "Roboto", sans-serif;
   font-weight: 400;
   background-color: #181b23;
-  z-index: 98;
-  display: none;
-  animation: slideIn 5s forwards;
+  z-index: 98;  
 }
 
+.errorMessageSlideIn{
+  animation: slideIn .5s forwards;
+}
+
+.errorMessageSlideOut{
+  animation: slideOut .5s forwards;
+}
 
 .errorHighlight{
   width: 600px;
@@ -115,7 +127,13 @@ footer{
   0% {
     left: calc(60% + 100px);
   }
-  10%, 90% {
+  100%{
+    left: calc(60% - 520px);
+  }
+}
+
+@keyframes slideOut {
+  0% {
     left: calc(60% - 520px);
   }
   100%{
@@ -152,7 +170,6 @@ textarea{
   font-size: 16px;
   line-height: 24px;
   font-family: "Roboto", sans-serif;
-  font-weight: 700;
   color: rgb(221, 221, 221);
   pointer-events: none;
   width: calc(100% - 70px);
@@ -407,8 +424,8 @@ textarea{
   padding: 10px;
   overflow-y: auto;
   white-space: pre;
-  font-size: 26px;
-  font-family: "VT323", serif;
+  font-size: 16px;
+  font-family: "Share Tech Mono", serif;
   font-weight: 400;
   font-style: normal;
 }
@@ -426,6 +443,20 @@ textarea{
   50% {
     border: 2px solid rgb(57, 57, 57);
   }
+}
+
+.outerHexValues{
+  width: 100%;
+  height: 130px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.hexValues{
+  width: calc(100% - 60px);
+  height: 100%;
+  background-color: #393E46;
 }
 
 .buttons{
@@ -479,7 +510,7 @@ textarea{
 
 
 span{
-  font-weight: 700;
+  /* font-weight: 700; */
 }
 
 .instruction8bit{
@@ -563,4 +594,30 @@ span{
   display: none;
   color: rgb(184, 184, 184);
   pointer-events: none;
+}
+
+
+.fileInput{
+  display: none;
+}
+
+.customFileInput{
+  /* display: inline-block; */
+  width: 100px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 30px;
+  font-weight: 700;
+  background-color: #025cbd;
+  cursor: pointer;
+  font-size: 14px;
+  margin-left: 50px;
+  text-align: center;
+  color: rgb(221, 221, 221);
+  /* transition: background-color 0.3s ease; */
+}
+
+.customFileInput:hover {
+  background-color: #0056b3;
 }

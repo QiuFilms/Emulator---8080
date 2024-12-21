@@ -3,7 +3,9 @@ import { Exeption } from "./Exeption.js";
 import { instructionsDefinitions } from "./instructionsDefinitions.js";
 import { Lexer } from "./Lexer.js";
 import { Processor } from "./Processor.js";
-import { Stack } from "./stack.js";
+import { Memory } from "./Processor/Memory.js";
+import { Stack } from "./Processor/Stack.js";
+import { UIBridge } from "./Processor/UIBridge/UIBridge.js";
 import { Utils } from "./utils.js";
 
 var document = window.document
@@ -15,50 +17,129 @@ window.addEventListener('load', function() {
 
 const textarea = document.querySelector("textarea");
 
-const proc = new Processor()
-function readASM(){
-    //button.style.pointerEvents = "none"
 
-    //document.querySelector(".display").textContent = ""
+const Bridge = new UIBridge()
+function readASM(){
+    
     const text = document.querySelector("textarea").value
     document.querySelector(".display").innerText = ""
 
-    const lexer = new Lexer()
-    const response = lexer.init(text)
-
+    const memory = new Memory()
+    const lexer = new Lexer(memory)
+    const response = lexer.parse(text)
+    
+    const proc = new Processor(lexer, Bridge, this)
+    //proc.setOrigin(lexer.getOrigin())
+    
+    
+    document.querySelector(".stop").onclick = () => {
+        if(proc.isEnd){
+            simulateInput("keypress", "body")
+        }
+        stopASM(proc)
+    }
     if(!response.status){
-        console.log(response);
-        
         return new Exeption(response.error.line, response.error.instruction).throw()
     }
-
     Exeption.hide()
-
-    proc.setLinePcAssociation(lexer.getAssociation())
-    Processor.setBreakPoints(breakPoints)
-    proc.setWorkType(this).init(lexer)
+    
+    //proc.setLinePcAssociation(lexer.getAssociation())
+    Bridge.setLinePcAssociation(lexer.getAssociation())
+    Bridge.setBreakPoints(breakPoints)
+    
+    
+    //Processor.setBreakPoints(breakPoints)
+    //proc.setWorkType(this).init(response)
+    //proc.setWorkType(this)
     //console.log(proc.Memory);
     
     document.querySelector(".start").style.display = "none"
     document.querySelector(".step").style.display = "none"
     document.querySelector(".stop").style.display = "flex"
-    proc.start()
     
+    proc.start()
+
     //console.log(proc.Memory);
+
+    
 }
 
-function stopASM(){
-    //proc.reset()
+Bridge.addEventListener('running_updateRegisters', (e) => { 
+    document.querySelector("#registerAvalue").innerText = `${e.detail.caller.Registers.A}H`
+    document.querySelector("#registerBvalue").innerText = `${e.detail.caller.Registers.B}H`
+    document.querySelector("#registerCvalue").innerText = `${e.detail.caller.Registers.C}H`
+    document.querySelector("#registerDvalue").innerText = `${e.detail.caller.Registers.D}H`
+    document.querySelector("#registerEvalue").innerText = `${e.detail.caller.Registers.E}H`
+    document.querySelector("#registerHvalue").innerText = `${e.detail.caller.Registers.H}H`
+    document.querySelector("#registerLvalue").innerText = `${e.detail.caller.Registers.L}H`
+
+    document.querySelector("#registerPCvalue").innerText = `${e.detail.caller.ProgramCounter.toHex()}H`
+    document.querySelector("#registerSPvalue").innerText = `${e.detail.caller.Stack.Pointer}H`
     
+    document.querySelector("#flagSvalue").innerText = e.detail.caller.FlagRegister.getSign()
+    document.querySelector("#flagZvalue").innerText = e.detail.caller.FlagRegister.getZero()
+    document.querySelector("#flagACvalue").innerText = e.detail.caller.FlagRegister.getAuxillaryCarry()
+    document.querySelector("#flagPvalue").innerText = e.detail.caller.FlagRegister.getParity()
+    document.querySelector("#flagCYvalue").innerText = e.detail.caller.FlagRegister.getCarry()
+});
+
+Bridge.addEventListener('running_switchCodeEditorInput', (e) => {
+    changePointerEvents()
+})
+
+
+
+Bridge.addEventListener('running_highLightLine', (e) => {
+    const currentLineHighlight = document.querySelector("pre").querySelectorAll(".currentLine")[0]
+    if(document.querySelector("pre").querySelectorAll(".currentLine").length != 0) currentLineHighlight.classList.remove("currentLine")
+
+    //console.log(e.target.linePcAssociation[e.target.ProgramCounter.get()], e.target.linePcAssociation);
+    
+    if(typeof Bridge.getLineFromPC(e.detail.caller.ProgramCounter.get()) != 'undefined') document.querySelectorAll("pre > span")[Bridge.getLineFromPC(e.detail.caller.ProgramCounter.get()) - 1].classList.add("currentLine")    
+})
+
+Bridge.addEventListener('stop', (e) => {
+    stopASM(e.detail.caller)
+    // const currentLineHighlight = document.querySelector("pre").querySelectorAll(".currentLine")[0]
+    // document.querySelector("textarea").focus()
+    // document.querySelector("textarea").style.pointerEvents = ""
+    // currentLineHighlight.classList.remove("currentLine")
+})
+
+Bridge.addEventListener('break', (e) => {
+    const currentLineHighlight = document.querySelector("pre").querySelectorAll(".currentLine")[0]
+    document.querySelector("textarea").focus()
+    document.querySelector("textarea").style.pointerEvents = ""
+    currentLineHighlight.classList.remove("currentLine")
+})
+
+Bridge.addEventListener('init', (e) => {
+    if(e.detail.caller.isStep){
+        document.querySelector("body").addEventListener("keypress", e.detail.caller.stepInputListener) 
+    } 
+})
+
+Bridge.addEventListener('running_displayUpdate', (e) => {
+    document.querySelector(".display").blur()
+    document.querySelector(".display").textContent += String.fromCharCode(e.which)
+    document.querySelector(".display").removeEventListener('keypress', e.detail.caller.inputListener)
+})
+
+Bridge.addEventListener('start', (e) => {
+    if(document.querySelector("textarea").style.pointerEvents != "none") changePointerEvents()
+})
+
+Bridge.addEventListener('checkIfLineInView', (e) => {
+    checkIfLineInView()
+})
+
+function stopASM(proc){
     document.querySelector(".display").removeEventListener('keypress', proc.inputListener)
-    console.log("Remove listener");
     
     document.querySelector("body").removeEventListener('keypress', proc.stepInputListener)
-
     document.querySelector(".stop").style.display = "none"
     document.querySelector(".start").style.display = "flex"
     document.querySelector(".step").style.display = "flex"
-    console.log(document.querySelector(".start").style.display);
     
     if(document.querySelector("pre").querySelector(".currentLine")){
         document.querySelector("pre").querySelectorAll(".currentLine")[0].classList.remove("currentLine")
@@ -70,68 +151,6 @@ function stopASM(){
 }
 window.stopASM = stopASM
 
-proc.addEventListener('running_updateRegisters', (e) => {
-    document.querySelector("#registerAvalue").innerText = `${e.target.Registries.A}H`
-    document.querySelector("#registerBvalue").innerText = `${e.target.Registries.B}H`
-    document.querySelector("#registerCvalue").innerText = `${e.target.Registries.C}H`
-    document.querySelector("#registerDvalue").innerText = `${e.target.Registries.D}H`
-    document.querySelector("#registerEvalue").innerText = `${e.target.Registries.E}H`
-    document.querySelector("#registerHvalue").innerText = `${e.target.Registries.H}H`
-    document.querySelector("#registerLvalue").innerText = `${e.target.Registries.L}H`
-    document.querySelector("#registerPCvalue").innerText = `${Utils.DecimalToHex16Bit(e.target.PC)}H`
-    document.querySelector("#registerSPvalue").innerText = `${Stack.Pointer}H`
-    
-    document.querySelector("#flagSvalue").innerText = e.target.FlagReg.S
-    document.querySelector("#flagZvalue").innerText = e.target.FlagReg.Z
-    document.querySelector("#flagACvalue").innerText = e.target.FlagReg.AC
-    document.querySelector("#flagPvalue").innerText = e.target.FlagReg.P
-    document.querySelector("#flagCYvalue").innerText = e.target.FlagReg.CY
-});
-
-proc.addEventListener('running_switchCodeEditorInput', (e) => {
-    changePointerEvents()
-})
-
-
-
-proc.addEventListener('running_highLightLine', (e) => {
-    const currentLineHighlight = document.querySelector("pre").querySelectorAll(".currentLine")[0]
-    if(document.querySelector("pre").querySelectorAll(".currentLine").length != 0) currentLineHighlight.classList.remove("currentLine")
-    if(typeof e.target.linePcAssociation[e.target.PC]-1 != 'undefined') document.querySelectorAll("pre > span")[e.target.linePcAssociation[e.target.PC]-1].classList.add("currentLine")    
-})
-
-proc.addEventListener('stop', (e) => {
-    stopASM()
-    // const currentLineHighlight = document.querySelector("pre").querySelectorAll(".currentLine")[0]
-    // document.querySelector("textarea").focus()
-    // document.querySelector("textarea").style.pointerEvents = ""
-    // currentLineHighlight.classList.remove("currentLine")
-})
-
-proc.addEventListener('break', (e) => {
-    const currentLineHighlight = document.querySelector("pre").querySelectorAll(".currentLine")[0]
-    document.querySelector("textarea").focus()
-    document.querySelector("textarea").style.pointerEvents = ""
-    currentLineHighlight.classList.remove("currentLine")
-})
-
-proc.addEventListener('init', (e) => {
-    if(e.target.isStep){
-        console.log("Add listener");
-        document.querySelector("body").addEventListener("keypress", proc.stepInputListener) 
-    } 
-})
-
-proc.addEventListener('running_displayUpdate', (e) => {
-    document.querySelector(".display").blur()
-    document.querySelector(".display").textContent += String.fromCharCode(e.which)
-    document.querySelector(".display").removeEventListener('keypress', e.target.inputListener)
-})
-
-proc.addEventListener('start', (e) => {
-    console.log("start Index");
-    if(document.querySelector("textarea").style.pointerEvents != "none") changePointerEvents()
-})
 
 
 function changePointerEvents(){
@@ -307,7 +326,7 @@ document.querySelector('textarea').addEventListener('keydown', function(e) {
         // put caret at right position again
         this.selectionStart =
         this.selectionEnd = start + 1; 
-        simulateInput("input")
+        simulateInput("input", "textarea")
 
     }
 })
@@ -344,19 +363,20 @@ function auto_grow(element) {
 
 
 document.querySelector(".fileInput").addEventListener("change", function(event) {
-    const file = event.target.files[0];
+    const file = event.target.files[0]
+    
     if (file) {
-        console.log("Nazwa pliku:", file.name);
-        console.log("Typ pliku:", file.type);
+
 
 
         const reader = new FileReader();
 
-        reader.onload = function (e) {
+        reader.onload = (e) => {
             const textarea = document.querySelector("textarea");
             textarea.value = e.target.result;
-
-            simulateInput("input")
+            this.value = ""
+            
+            simulateInput("input", "textarea")
         
         };
 
@@ -370,8 +390,11 @@ document.querySelector(".fileInput").addEventListener("change", function(event) 
 });
 
 
-function simulateInput(event){
-    const textarea = document.querySelector("textarea");
+document.querySelector('.errorMessage').addEventListener('click', () =>  Exeption.hide())
+
+
+function simulateInput(event, element){
+    const textarea = document.querySelector(element);
 
     const keyupEvent = new KeyboardEvent(event, {
         key: "a",
@@ -383,4 +406,36 @@ function simulateInput(event){
     });
     
     textarea.dispatchEvent(keyupEvent);
+}
+
+
+
+
+function checkIfLineInView(){     
+    const observerCallback = (entries) => {
+        if(document.querySelector(".currentLine")){
+            entries.forEach(entry => {
+                if (!entry.isIntersecting) {
+                    const container = document.querySelector(".left");
+                    const element = document.querySelector(".currentLine");
+            
+            
+                    const containerRect = container.getBoundingClientRect();
+                    const elementRect = element.getBoundingClientRect();
+    
+                    document.querySelector(".left").scrollTo({
+                        top: elementRect.top - containerRect.top + container.scrollTop - 50,
+                        behavior: "smooth",
+                    });
+                }
+                observer.disconnect()
+                    
+            });
+        };
+        
+        const observer = new IntersectionObserver(observerCallback, { root: null, threshold: 0 });
+        
+        observer.observe(document.querySelector(".currentLine"));
+        }
+       
 }

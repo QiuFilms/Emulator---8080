@@ -14,14 +14,17 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
-    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <script src="index.js" type="module" defer></script>
 
 
 </head>
 <body>
     <header>
-        <input type="file" name="" class="fileInput" accept=".asm, text/plain">
+        <div for="fileInput" class="customFileInput" onclick="document.querySelector('.fileInput').click()">Choose File</div>
+        <input type="file" class="fileInput" accept=".asm, text/plain">
     </header>
     <main>
         <div class="left">
@@ -130,6 +133,10 @@
 
             <div class="outerDisplay">
                 <div class="display" tabindex="0"></div>
+            </div>
+
+            <div class="outerHexValues">
+                <div class="hexValues">123123</div>
             </div>
         </div>
     </main>
