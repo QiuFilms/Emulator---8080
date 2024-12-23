@@ -1,3 +1,4 @@
+import { HexCode } from "./HexCode.js"
 import { Memory } from "./Processor/Memory.js"
 import { ProgramCounter } from "./Processor/ProgramCounter.js"
 import { Utils } from "./utils.js"
@@ -122,11 +123,11 @@ export class Lexer{
                 
                 
                 if(letter == ":"){
-                    this.ProgramCounter.add(1)
+                    //this.ProgramCounter.add(1)
                 
                     //this.Memory[this.ProgramCounter.toHex()] = [this.current]
-                    this.Memory.writeLabel(this.ProgramCounter.get(), this.current)
-                    this.Labels[this.current] = this.ProgramCounter.toHex()
+                    //this.Memory.writeLabel(this.ProgramCounter.get(), this.current)
+                    this.Labels[this.current] = this.ProgramCounter.offset(1).toHexOffset()
                     
                     let rest = word.slice(this.current.length + 1).trim()
                     
@@ -172,12 +173,20 @@ export class Lexer{
             }
         }
 
+
+        
         this.fillLabelsAdresess()
+        new HexCode(this.Memory, this.linePcAssociation).insertHexCode()
+
+        //this.printToBox()
         return {
             status: true,
             Memory: this.Memory,
             Labels: this.Labels
         }
+    }
+
+    printToBox(){
     }
 
 
@@ -256,6 +265,7 @@ export class Lexer{
             const byte = Utils.formatNumberToHex8Bit(args[1])
 
             this.ProgramCounter.add(1)
+            
             this.current += ` ${args[0]}`
             //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)
             this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)

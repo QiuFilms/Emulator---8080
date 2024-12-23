@@ -28,7 +28,7 @@ var document = window.document
 let offsetTop = 0
 let scrollFromTop = 0
 
-export class Processor extends EventTarget{
+export class Processor{
     ProgramCounter = new ProgramCounter()
     Stack = new Stack()
     Registers = new Registers()
@@ -40,7 +40,6 @@ export class Processor extends EventTarget{
     static breakPoints = new Set();
 
     constructor(lexer, bridge, workType){
-        super()
         this.Memory = lexer.Memory
         this.Labels = lexer.Labels
         this.UIBridge = bridge
@@ -127,8 +126,9 @@ export class Processor extends EventTarget{
     inputListener = (e) => {
         e.stopPropagation()
         e.preventDefault()
-        this.Registers.A = Utils.DecimalToHex8Bit(e.which)
-        
+
+        this.Registers.set(REGISTER.A, Utils.DecimalToHex8Bit(e.which))
+        this.updateRegisters()
         
         document.querySelector(".display").blur()
         document.querySelector(".display").textContent += String.fromCharCode(e.which)
@@ -158,7 +158,7 @@ export class Processor extends EventTarget{
         e.preventDefault()
         
         //Processor.breakPoints.delete(this.linePcAssociation[this.ProgramCounter.get()])
-        
+        Processor.breakPoints.delete(this.UIBridge.getLineFromPC(this.ProgramCounter.get()))
         document.body.removeEventListener("keypress", this.countinueAfterBreak)
         this.start()
     }
@@ -169,6 +169,7 @@ export class Processor extends EventTarget{
         this.UIBridge.defineEvent("running_switchCodeEditorInput", this)
         this.UIBridge.defineEvent("running_highLightLine", this)
         this.UIBridge.defineEvent("running_displayUpdate", this)
+        this.UIBridge.defineEvent("running_hexHighlight", this)
         this.UIBridge.defineEvent("stop", this)
         this.UIBridge.defineEvent("break", this)
         this.UIBridge.defineEvent("init", this)
@@ -211,12 +212,14 @@ export class Processor extends EventTarget{
                         return
                     } 
                     
-
+                    this.UIBridge.dispatch("running_hexHighlight");
                     const instruction = hexOpCodes[memCell].split(" ")[0]
                     this[instruction](hexOpCodes[memCell].split(" ")[1])
                     this.updateRegisters()
                     
+                    
                     if(this.isPaused) return
+                    if(this.isEnd) break
             } else {
                 this.ProgramCounter.add(1)
                 continue
@@ -236,8 +239,6 @@ export class Processor extends EventTarget{
         // console.log(this.Memory.read([this.ProgramCounter.offset(-1).toHexOffset()])[1]);
         //|| (!this.isStep , this.Memory.read([this.ProgramCounter.offset(-1).toHexOffset()]) == "D7" )
         if(this.isEnd || this.isStep ){
-            console.log("asdsdasdasdaasd");
-            
             document.querySelector("body").addEventListener("keypress", this.stepAwaitForLastInputListener)
             return
         }
@@ -813,7 +814,7 @@ export class Processor extends EventTarget{
         
         //console.log(this.linePcAssociation, this.ProgramCounter.get());
         const container = document.querySelector(".left");
-        const element = document.querySelectorAll("pre > span")[this.UIBridge.getLineFromPC(this.ProgramCounter.offset(1).getOffset())];
+        const element = document.querySelectorAll("pre > span")[this.UIBridge.getLineFromPC(this.ProgramCounter.offset(0).getOffset())];
         
 
         // Scroll the container to the element
@@ -947,7 +948,7 @@ export class Processor extends EventTarget{
         
         
         const container = document.querySelector(".left");
-        const element = document.querySelectorAll("pre > span")[this.UIBridge.getLineFromPC(this.ProgramCounter.offset(1).getOffset())];
+        const element = document.querySelectorAll("pre > span")[this.UIBridge.getLineFromPC(this.ProgramCounter.offset(0).getOffset())];
 
 
         // Scroll the container to the element
@@ -984,6 +985,8 @@ export class Processor extends EventTarget{
     }
 
     JZ(){
+        console.log(this.FlagRegister.getZero());
+        
         if(this.FlagRegister.getZero()){
             this.JMP()
         }else{
@@ -1142,7 +1145,7 @@ export class Processor extends EventTarget{
 
 
     CPI(){
-        Utils.Substraction8Bit(Utils.HexToDecimal(this.Registers.A), Utils.HexToDecimal(this.Memory.read(this.ProgramCounter.offset(1).toHexOffset())), this.FlagRegister)
+        Utils.Substraction8Bit(Utils.HexToDecimal(this.Registers.get(REGISTER.A)), Utils.HexToDecimal(this.Memory.read(this.ProgramCounter.offset(1).toHexOffset())), this.FlagRegister)
         this.ProgramCounter.add(2)
     }
 

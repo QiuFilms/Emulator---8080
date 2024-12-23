@@ -99,7 +99,7 @@ export class Utils{
     
     static Substraction8Bit(byte, value, FlagRegister, setCY = true){
         let sub = byte - value 
-    
+ 
         if(sub < 0){
             sub += 256
             FlagRegister.setCarry(setCY ? 1 : FlagRegister.getCarry())

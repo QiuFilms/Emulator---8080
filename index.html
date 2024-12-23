@@ -23,8 +23,14 @@
 </head>
 <body>
     <header>
-        <div for="fileInput" class="customFileInput" onclick="document.querySelector('.fileInput').click()">Choose File</div>
-        <input type="file" class="fileInput" accept=".asm, text/plain">
+        <div class="inputsLeft">
+            <div for="fileInput" class="customFileInput" onclick="document.querySelector('.fileInput').click()">Upload File</div>
+            <input type="file" class="fileInput" accept=".asm, text/plain">
+    
+            <div for="fileInput" class="saveFile">Save file</div>
+        </div>
+
+        <div class="inputsRight"></div>
     </header>
     <main>
         <div class="left">
@@ -136,7 +142,7 @@
             </div>
 
             <div class="outerHexValues">
-                <div class="hexValues">123123</div>
+                <div class="hexValues"></div>
             </div>
         </div>
     </main>

@@ -1,5 +1,6 @@
 import { CodeFormatter, regex8Bit } from "./CodeFormatter.js";
 import { Exeption } from "./Exeption.js";
+import { FileManager } from "./FileManager.js";
 import { instructionsDefinitions } from "./instructionsDefinitions.js";
 import { Lexer } from "./Lexer.js";
 import { Processor } from "./Processor.js";
@@ -11,7 +12,10 @@ import { Utils } from "./utils.js";
 var document = window.document
 
 window.addEventListener('load', function() {  
-    
+    if(localStorage.length != 0){
+        textarea.value = localStorage.getItem(FileManager.currentFileName())   
+        simulateInput("input", "textarea")
+    }
 })
 
 
@@ -93,17 +97,26 @@ Bridge.addEventListener('running_highLightLine', (e) => {
     const currentLineHighlight = document.querySelector("pre").querySelectorAll(".currentLine")[0]
     if(document.querySelector("pre").querySelectorAll(".currentLine").length != 0) currentLineHighlight.classList.remove("currentLine")
 
+
     //console.log(e.target.linePcAssociation[e.target.ProgramCounter.get()], e.target.linePcAssociation);
     
-    if(typeof Bridge.getLineFromPC(e.detail.caller.ProgramCounter.get()) != 'undefined') document.querySelectorAll("pre > span")[Bridge.getLineFromPC(e.detail.caller.ProgramCounter.get()) - 1].classList.add("currentLine")    
+    if(typeof Bridge.getLineFromPC(e.detail.caller.ProgramCounter.get()) != 'undefined'){
+        document.querySelectorAll("pre > span")[Bridge.getLineFromPC(e.detail.caller.ProgramCounter.get()) - 1].classList.add("currentLine")
+    } 
+})
+
+Bridge.addEventListener('running_hexHighlight', (e) => {
+    const currentHexHighlight = document.querySelector(".hexValues").querySelectorAll(".hexHighlight")[0]
+    if(document.querySelector(".hexValues").querySelectorAll(".hexHighlight").length != 0) currentHexHighlight.classList.remove("hexHighlight")
+    
+        
+    document.querySelector(`.hexValues > #PC${e.detail.caller.ProgramCounter.get()}`).classList.add("hexHighlight")
+    document.querySelector(".hexHighlight").scrollIntoView({behavior: "smooth", block: "center", inline: "center"})
+
 })
 
 Bridge.addEventListener('stop', (e) => {
     stopASM(e.detail.caller)
-    // const currentLineHighlight = document.querySelector("pre").querySelectorAll(".currentLine")[0]
-    // document.querySelector("textarea").focus()
-    // document.querySelector("textarea").style.pointerEvents = ""
-    // currentLineHighlight.classList.remove("currentLine")
 })
 
 Bridge.addEventListener('break', (e) => {
@@ -134,6 +147,7 @@ Bridge.addEventListener('checkIfLineInView', (e) => {
 })
 
 function stopASM(proc){
+    document.querySelector(".hexValues").innerHTML = ""
     document.querySelector(".display").removeEventListener('keypress', proc.inputListener)
     
     document.querySelector("body").removeEventListener('keypress', proc.stepInputListener)
@@ -364,29 +378,20 @@ function auto_grow(element) {
 
 document.querySelector(".fileInput").addEventListener("change", function(event) {
     const file = event.target.files[0]
-    
-    if (file) {
 
-
-
-        const reader = new FileReader();
-
-        reader.onload = (e) => {
+    if(file){
+        FileManager.read(file, (e) => {
             const textarea = document.querySelector("textarea");
             textarea.value = e.target.result;
             this.value = ""
             
             simulateInput("input", "textarea")
-        
-        };
-
-        reader.onerror = function (e) {
-            console.error("Błąd podczas odczytu pliku:", e.target.error);
-        };
-
-        reader.readAsText(file);
-        
+        })  
     }
+});
+
+document.querySelector(".saveFile").addEventListener("click", function(event) {
+    FileManager.save(document.querySelector("textarea").value)
 });
 
 
@@ -411,9 +416,8 @@ function simulateInput(event, element){
 
 
 
-function checkIfLineInView(){     
-    const observerCallback = (entries) => {
-        if(document.querySelector(".currentLine")){
+function checkIfLineInView(){  
+        const observerCallback = (entries) => {
             entries.forEach(entry => {
                 if (!entry.isIntersecting) {
                     const container = document.querySelector(".left");
@@ -422,7 +426,7 @@ function checkIfLineInView(){
             
                     const containerRect = container.getBoundingClientRect();
                     const elementRect = element.getBoundingClientRect();
-    
+
                     document.querySelector(".left").scrollTo({
                         top: elementRect.top - containerRect.top + container.scrollTop - 50,
                         behavior: "smooth",
@@ -431,11 +435,22 @@ function checkIfLineInView(){
                 observer.disconnect()
                     
             });
-        };
-        
+        }  
+                    
         const observer = new IntersectionObserver(observerCallback, { root: null, threshold: 0 });
-        
+
         observer.observe(document.querySelector(".currentLine"));
-        }
-       
+        
 }
+
+
+document.addEventListener('keydown', (event) => {
+    if ((event.ctrlKey || event.metaKey) && event.key === 's'){
+        // if(localStorage.get(FileManager.currentFileName()) != document.querySelector("textarea").value){
+        //     localStorage.setItem(FileManager.currentFileName(), document.querySelector("textarea").value)
+        // }
+        localStorage.setItem(FileManager.currentFileName(), document.querySelector("textarea").value)
+        
+      event.preventDefault();
+    }
+  });
