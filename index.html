@@ -22,12 +22,51 @@
 
 </head>
 <body>
+    <dialog class="saveFileModal">
+        <p class="modalName">Save file</p>
+        <div class="inputs">
+            <p for="">Name</p>
+            <input type="text" class="fileName">
+            
+            <p for="">Destination</p>
+            <select class="saveType">
+                <option value="1">Device</option>
+                <option value="2">On site</option>
+            </select>
+        </div>
+        <div class="modalButtons">
+            <div class="saveButton" onclick="document.querySelector('.saveFileModal').close()">Save</div>
+            <div class="closeButton" onclick="document.querySelector('.saveFileModal').close()">Close</div>
+        </div>
+    </dialog>
+
+    <!-- <dialog class="loadFileModal">
+        <p class="modalName">Load file</p>
+        <div class="inputs">
+            <div for="fileInput" class="uploadModalFile" onclick="document.querySelector('.fileInput').click()">Upload File</div>
+            <input type="file" class="fileInput" accept=".asm, text/plain">
+            
+        </div>
+        <div class="modalButtons">
+            <div class="saveButton" onclick="document.querySelector('.loadFileModal').close()">Load</div>
+            <div class="closeButton" onclick="document.querySelector('.loadFileModal').close()">Close</div>
+
+        </div>
+    </dialog> -->
+    <div class="files">
+        <ul>
+            <li class="upload">Upload</li>
+            <li class="saveAs">Save as...</li>
+            <li class="saveInBrowser">Save in browser</li>
+        </ul>
+    </div>
+
     <header>
         <div class="inputsLeft">
-            <div for="fileInput" class="customFileInput" onclick="document.querySelector('.fileInput').click()">Upload File</div>
+            <div for="fileInput" class="customFileInput">File</div>
             <input type="file" class="fileInput" accept=".asm, text/plain">
     
-            <div for="fileInput" class="saveFile">Save file</div>
+            <!-- <div for="fileInput" class="saveFile" onclick="document.querySelector('.saveFileModal').showModal()">Save file</div> -->
         </div>
 
         <div class="inputsRight"></div>
@@ -146,6 +185,7 @@
             </div>
         </div>
     </main>
+    
     <footer></footer>
 </body>
 </html>

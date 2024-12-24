@@ -12,10 +12,17 @@ import { Utils } from "./utils.js";
 var document = window.document
 
 window.addEventListener('load', function() {  
-    if(localStorage.length != 0){
-        textarea.value = localStorage.getItem(FileManager.currentFileName())   
+    if(typeof FileManager.getRecent() != "undefined"){
+        textarea.value = FileManager.getRecent() 
+        textarea.selectionEnd = 0
         simulateInput("input", "textarea")
+    }else{
+        FileManager.prepareMemory()
     }
+})
+
+window.addEventListener('beforeunload', function() {  
+    FileManager.saveToRecent(document.querySelector("textarea").value)
 })
 
 
@@ -24,7 +31,10 @@ const textarea = document.querySelector("textarea");
 
 const Bridge = new UIBridge()
 function readASM(){
-    
+    if(document.querySelector("pre").querySelector(".currentLineEdited")){
+        document.querySelector("pre > .currentLineEdited").classList.toggle("currentLineEdited")
+    }
+
     const text = document.querySelector("textarea").value
     document.querySelector(".display").innerText = ""
 
@@ -60,7 +70,7 @@ function readASM(){
     document.querySelector(".start").style.display = "none"
     document.querySelector(".step").style.display = "none"
     document.querySelector(".stop").style.display = "flex"
-    
+
     proc.start()
 
     //console.log(proc.Memory);
@@ -203,7 +213,19 @@ function showDefinition(){
     const hoverElement = document.querySelector(".def")
     const row = getCaretRow()
     const parser = new DOMParser()
-
+    
+    //EditorLineIndicator
+    if(document.querySelector("pre").childNodes.length != 0){
+        if(document.querySelector("pre").querySelector(".currentLineEdited")){
+            document.querySelector("pre > .currentLineEdited").classList.toggle("currentLineEdited")
+        }
+        
+        
+        if(row <= document.querySelector("pre").childNodes.length){
+            document.querySelectorAll("pre > span")[row - 1].classList.toggle("currentLineEdited")
+        }
+    }
+    ////
     
     if(!(typeof codeFormatter.code[row - 1] != 'undefined' && codeFormatter.code[row - 1].length)){
 
@@ -377,8 +399,9 @@ function auto_grow(element) {
 
 
 document.querySelector(".fileInput").addEventListener("change", function(event) {
+    
     const file = event.target.files[0]
-
+    
     if(file){
         FileManager.read(file, (e) => {
             const textarea = document.querySelector("textarea");
@@ -390,8 +413,16 @@ document.querySelector(".fileInput").addEventListener("change", function(event) 
     }
 });
 
-document.querySelector(".saveFile").addEventListener("click", function(event) {
-    FileManager.save(document.querySelector("textarea").value)
+document.querySelector(".saveButton").addEventListener("click", function(event) {
+    const name = document.querySelector(".fileName").value
+    const type = document.querySelector(".saveType").value
+
+    if(type == "1"){
+        FileManager.save(document.querySelector("textarea").value, name)
+    }else{
+        FileManager.addToMemory(document.querySelector("textarea").value, name)
+    }
+    //FileManager.save(document.querySelector("textarea").value)
 });
 
 
@@ -453,4 +484,83 @@ document.addEventListener('keydown', (event) => {
         
       event.preventDefault();
     }
-  });
+
+    if ((event.shiftKey || event.metaKey) && event.key === 'F10'){
+        if(document.querySelector(".start").style.display == "none"){
+            document.querySelector(".stop").click()
+        }else{
+            document.querySelector(".start").click()
+        }
+      event.preventDefault();
+
+    }
+});
+
+
+
+document.querySelector(".customFileInput").addEventListener("click", (e) => {
+    e.stopPropagation()
+    document.querySelector(".files").classList.toggle("filesOpened")
+    document.querySelector(".files > ul")
+
+    const files = FileManager.getFiles()
+    const ul = document.querySelector(".files > ul")
+
+    while (ul.children.length > 3) {
+        ul.removeChild(ul.children[3]);
+    }
+
+    for (const file in files) {
+        const li = document.createElement("li")
+        li.innerText = file
+        li.onclick = () => {
+            document.querySelector("textarea").value = files[file]
+            FileManager.saveToRecent(files[file])
+            FileManager.setCurrentFileName(file)
+            textarea.selectionEnd = 0
+
+            simulateInput("input", "textarea")
+            simulateInput("keyup", "textarea")
+
+            document.querySelector(".files").classList.toggle("filesOpened")
+
+
+        }
+        document.querySelector(".files > ul").appendChild(li)
+    }
+    
+    function closeFiles(){
+        if(document.querySelector(".files").classList.contains("filesOpened")){
+            document.querySelector(".files").classList.toggle("filesOpened")
+        }
+
+        document.removeEventListener('click', closeFiles)
+    }
+
+    document.addEventListener('click', closeFiles);
+})
+
+
+
+
+document.querySelector(".upload").addEventListener("click", (e) => {
+    e.stopPropagation()
+
+    document.querySelector(".fileInput").click()
+    //document.querySelector(".files").classList.toggle("filesOpened")
+})
+
+document.querySelector(".saveAs").addEventListener("click", (e) => {
+    e.stopPropagation()
+
+    document.querySelector(".files").classList.toggle("filesOpened")
+    document.querySelector(".saveFileModal").showModal()
+
+})
+
+document.querySelector(".saveInBrowser").addEventListener("click", (e) => {
+    e.stopPropagation()
+
+    document.querySelector(".files").classList.toggle("filesOpened")
+    FileManager.saveToRecent(document.querySelector("textarea").value)
+})
