@@ -37,7 +37,7 @@ export class Processor{
     isPaused = false
     isEnd = false
     jump = false
-    static breakPoints = new Set();
+    //static breakPoints = new Set();
 
     constructor(lexer, bridge, workType){
         this.Memory = lexer.Memory
@@ -50,9 +50,9 @@ export class Processor{
         this.UIBridge.dispatch("init");
     }
 
-    static setBreakPoints(breakPoints){
-        this.breakPoints = breakPoints
-    }
+    // static setBreakPoints(breakPoints){
+    //     this.breakPoints = breakPoints
+    // }
     
     ///Setters
     // setOrigin(origin){
@@ -146,7 +146,7 @@ export class Processor{
             e.preventDefault()
         }
         document.querySelector("body").removeEventListener("keypress", this.stepAwaitForLastInputListener)
-
+        
         
         //this.dispatchEvent(new Event('stop'));
         this.UIBridge.dispatch("stop");
@@ -158,7 +158,7 @@ export class Processor{
         e.preventDefault()
         
         //Processor.breakPoints.delete(this.linePcAssociation[this.ProgramCounter.get()])
-        Processor.breakPoints.delete(this.UIBridge.getLineFromPC(this.ProgramCounter.get()))
+        this.UIBridge.removeBreakPoint(this.ProgramCounter.get())
         document.body.removeEventListener("keypress", this.countinueAfterBreak)
         this.start()
     }
@@ -207,6 +207,7 @@ export class Processor{
                     }
 
                     
+
                     if(this.UIBridge.hasBreakPoint(this.ProgramCounter.get())){
                         document.querySelector("body").addEventListener("keypress", this.countinueAfterBreak)
                         return

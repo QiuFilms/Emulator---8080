@@ -22,11 +22,12 @@ export class FileManager{
         return this.#currentFileName
     }
 
-    static read(file, callback){
+    static readAsText(file, callback){
         const reader = new FileReader();
 
         reader.onload = (e) => {
             this.#currentFileName = file.name
+            
             
             callback(e)
         };
@@ -37,6 +38,24 @@ export class FileManager{
 
         reader.readAsText(file);
     }
+
+    static readAsArrayBuffer(file, callback){
+        const reader = new FileReader();
+
+        reader.onload = (e) => {
+            this.#currentFileName = file.name
+            
+            
+            callback(e)
+        };
+
+        reader.onerror = function (e) {
+            console.error("Błąd podczas odczytu pliku:", e.target.error);
+        };
+
+        reader.readAsArrayBuffer(file);
+    }
+
 
     static save(data, name = this.#currentFileName){
         const blob = new Blob([data], {type: 'text/plain'});

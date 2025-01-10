@@ -5,9 +5,9 @@ const regex16Bit = /^(\s|\t)*(lxi|shld|lhld|pop|push|sphl|xthl|xchg)(\s|\t)+/i
 const regex8BitArithmetical = /^(\s|\t)*(inr|dcr|rlc|ral|daa|stc|rrc|rar|cma|cmc|add|adc|sub|sbb|ana|xra|ora|cmp|adi|sui|ani|ori|aci|sbi|xri|cpi|stc)(\s|\t)+/i
 const regex16BitArithmetical = /^(\s|\t)*(inx|dad|dcx)(\s|\t)+/i
 const regexJumps = /^(\s|\t)*(rnz|rnc|rpo|rp|jnz|jnc|jpo|jp|jmp|cnz|cnc|cpo|cp|rst|rz|rc|rpe|rm|pchl|jz|jc|jpe|cz|cc|cpe|cm|call|out|in)(\s|\t)+/i
-const regexMisc = /^(\s|\t)*(hlt|nop|ret|db)(\s|\t)*/i
+const regexMisc = /^(\s|\t)*(hlt|nop|ret|db)(\s|\t)*|(\s+equ\s+)/i
 const args = [/([A-E]|[HL]|M)(\s|\t)*,(\s|\t)*(((0{0,2}[0-9A-F]{1,2}H)|(((0?[0-2]?[0-5]{1,2}D?)|(0?[0-9]{1,2})))|([01]{1,8}B)|(([0-3]?[0-7]{1,2})(Q|O)))|\d*)(\s|\t)*/i]
-
+const comment = /;(?=(?:[^']*'[^']*')*[^']*$).*/g;
 
 
 export class CodeFormatter extends EventTarget{
@@ -104,9 +104,14 @@ export class CodeFormatter extends EventTarget{
     }
 
     static formatLine(line){
-        let string = line.match(regex8Bit)
+        let string = line.match(comment)
 
-
+        if(string){
+            const replacer = `<span class='comment'>${string[0]}</span>`
+            line = line.replace(comment, replacer)
+        }
+       
+        string = line.match(regex8Bit)
         const checkForArguments = () => {
             for (const argument of args) {
                 string = line.match(argument)
@@ -115,29 +120,39 @@ export class CodeFormatter extends EventTarget{
                     string = string[0].split(",")
                     let replacer
                     
+                    //string = line.split(">")
+                    
                     string = line.split(">")
+
                     
-                    let stringArguments = string.pop().split(",")
+                    //let stringArguments = string.pop().split(",")
+                    let stringArguments = string[2].split("<").shift().split(",")
+
                     //console.log(stringArguments);
-                    
+      
                     if(line.match(/\s*mov\s*/i)){
                         replacer = `<span class='argumentRegister${stringArguments[0].toUpperCase().trim()}'>${stringArguments[0]}</span>,<span class='argumentRegister${stringArguments[1].toUpperCase().trim()}'>${stringArguments[1]}</span>`
+                        
+                        line = line.replace(stringArguments.join(","), replacer)
                     }else{
                         replacer = `<span class='argumentRegister${stringArguments[0].toUpperCase().trim()}'>${stringArguments[0]}</span>,<span class='argumentTwo'>${stringArguments[1]}</span>`
+                        line = line.replace(stringArguments.join(","), replacer)
+                        
                     }
 
-                    line = string.join(">") + ">" + replacer
+                    //line = string.join(">") + ">" + replacer
                     
                 }
             }
         }
 
+        
         if(string){
             const replacer = `<span class='instruction8bit'>${string[0]}</span>`
             line = line.replace(regex8Bit, replacer)
             checkForArguments()
         }
-    
+
     
         string = line.match(regex16Bit)
         if(string){
@@ -171,6 +186,7 @@ export class CodeFormatter extends EventTarget{
             line = line.replace(regexMisc, replacer)
         }
         
+
 
 
 

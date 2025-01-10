@@ -1,3 +1,21 @@
+:root{
+  --code-background: #393E46;
+  --code-lineIndicatorDark:  #1F1F1F;
+  --code-lineIndicatorLight: #2e3035;
+  --header-footer: #222831;
+  --editor-font: #dddddd;
+}
+
+
+[data-theme="dark"] {
+  --code-background: #dddddd;
+  --code-lineIndicatorDark:  #3c3c3c;
+  --code-lineIndicatorLight: #666666;
+  --header-footer: #565e69;
+  --editor-font: black;
+
+}
+
 .roboto-thin {
     font-family: "Roboto", sans-serif;
     font-weight: 100;
@@ -54,7 +72,7 @@
   }
 
 ::-webkit-scrollbar-track {
-    background: #222831; 
+    background: var( --header-footer); 
 }
 
 ::-webkit-scrollbar-thumb {
@@ -73,20 +91,20 @@ main{
 
 header{
     height: 40px;
-    background-color: #222831;
+    background-color: var(--header-footer);
     z-index: 1;
 }
 
 
 footer{
     height: 20px;
-    background-color: #222831;
+    background-color: var(--header-footer);
     z-index: 99;
 }
 
 .left{
     width: 60%;
-    background-color: #222831;
+    background-color: var(--header-footer);
     height: calc(100vh - 60px);
     display: flex;
     overflow-y: scroll;
@@ -147,7 +165,7 @@ textarea{
     padding: 5px;
     padding-left: 25px;
     
-    background-color: #393E46;
+    background-color: var(--code-background);
     border: none;
     outline: none;
     resize: none;
@@ -158,7 +176,7 @@ textarea{
     font-style: normal;
     overflow: hidden;
     cursor: text;
-    caret-color: rgb(221, 221, 221);
+    caret-color: var(--editor-font);
 }
 
 .formattedCode{
@@ -169,7 +187,7 @@ textarea{
   font-size: 16px;
   line-height: 24px;
   font-family: "Roboto", sans-serif;
-  color: rgb(221, 221, 221);
+  color: var(--editor-font);
   pointer-events: none;
   width: calc(100% - 70px);
   display: flex;
@@ -185,7 +203,7 @@ textarea{
 .lineIndicator{
     padding-top: 5px;
     width: 50px;
-    background-color: #1F1F1F;
+    background-color: var(--code-lineIndicatorDark);
 }
 
 .lineIndicator > li {
@@ -200,11 +218,11 @@ textarea{
 }
 
 .lineIndicator > li:nth-of-type(2n + 1) {
-    background-color: #1F1F1F;
+    background-color: var(--code-lineIndicatorDark);
 }
   
 .lineIndicator > li:nth-of-type(2n) {
-    background-color: #2e3035;
+    background-color: var(--code-lineIndicatorLight);
 }
 
 .def{
@@ -220,7 +238,7 @@ textarea{
   border-radius: 50%;
   font-size: 12px;
   border: 2px solid lightslategray;
-  background-color: #393E46;
+  background-color: var(--code-background);
   color: lightslategray;
   font-weight: 700;
   cursor: default;
@@ -248,7 +266,7 @@ textarea{
 .right{
   height: calc(100vh - 60px);
   width: 40%;
-  background-color: #222831;
+  background-color: var( --header-footer);
   z-index: 99;
   display: flex;
   flex-direction: column;
@@ -276,9 +294,9 @@ textarea{
 .registerPair .register{
   width: 120px;
   height: 100%;
-  background-color: #1F1F1F;
+  background-color: var(--code-lineIndicatorDark);
   display: flex;
-  color: rgb(221, 221, 221);
+  color: #dddddd;
 }
 
 .registerPair .registerName{
@@ -325,8 +343,8 @@ textarea{
   width: 180px;
   height: 40px;
   display: flex;
-  color: rgb(221, 221, 221);
-  background-color: #1F1F1F;
+  color: var(--editor-font);
+  background-color: var(--code-lineIndicatorDark);
   margin-bottom: 20px;
 
 }
@@ -374,7 +392,7 @@ textarea{
 .flag{
   height: 100%;
   width: 30px;
-  background-color: #1F1F1F;
+  background-color: var(--code-lineIndicatorDark);
 }
 
 
@@ -396,7 +414,7 @@ textarea{
 
 .flagNone{
   height: 30px;
-  background-color: #222831;
+  background-color: var( --header-footer);
   width: 100%;
 }
 
@@ -405,7 +423,7 @@ textarea{
   display: flex;
   justify-content: center;
   align-items: center;
-  color: rgb(221, 221, 221);
+  color: #dddddd;
   font-family: "Roboto", sans-serif;
   font-weight: 700;
 }
@@ -465,10 +483,10 @@ textarea{
 .hexValues{
   width: calc(100% - 80px);
   height: calc(100% - 20px);
-  background-color: #393E46;
+  background-color: var(--code-background);
   /* text-align: center; */
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(26px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
   gap: 16px;
   padding: 10px;
   overflow-y: scroll;
@@ -480,7 +498,7 @@ textarea{
   height: 20px;
   padding-inline: 3px;
   text-align: center;
-  color: rgb(221, 221, 221);
+  color: #dddddd;
 }
 
 
@@ -524,7 +542,7 @@ textarea{
   display: flex;
   justify-content: center;
   align-items: center;
-  color: rgb(221, 221, 221);
+  color: #dddddd;
   cursor: pointer;
   font-weight: 700;
 }
@@ -587,6 +605,15 @@ span{
   color: rgb(238, 61, 61);
 }
 
+.comment{
+  color: rgb(160, 160, 160);
+}
+
+/* .currentLineEdited > .comment{
+  color: rgb(207, 207, 207);
+} */
+
+
 .argumentOne{
   color: #924cfa;
 }
@@ -612,7 +639,7 @@ span{
 
 
 .argumentTwo{
-  color: rgb(221, 221, 221);
+  color: var(--editor-font);
 }
 
 
@@ -638,7 +665,7 @@ span{
   position: absolute;
   top: 0;
   left: 70px;
-  background-color: #1F1F1F;
+  background-color: var(--code-lineIndicatorDark);
   padding: 3px;
   z-index: 99;
   display: none;
@@ -672,7 +699,7 @@ span{
   font-size: 14px;
   
   text-align: center;
-  color: rgb(221, 221, 221);
+  color: #dddddd;
   /* transition: background-color 0.3s ease; */
 }
 
@@ -693,7 +720,7 @@ span{
   cursor: pointer;
   font-size: 14px;
   text-align: center;
-  color: rgb(221, 221, 221);
+  color: #dddddd;
 }
 
 
@@ -703,11 +730,11 @@ dialog{
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  background-color: #393E46;
+  background-color: var(--code-background);
   width: 300px;
   height: 300px;
   border: none;
-  color: rgb(221, 221, 221);
+  color: #dddddd;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -722,7 +749,7 @@ dialog::backdrop {
   padding-block: 15px;
   font-size: 18px;
   font-weight: 700;
-  /* border-bottom: 2px solid rgb(221, 221, 221); */
+  /* border-bottom: 2px solid #dddddd; */
   margin-bottom: 10px;
   background-color: #0056b3;
   text-align: center;
@@ -811,7 +838,7 @@ dialog .inputs input{
 
 .files{
   position: absolute;
-  top: 40px;
+  top: 70px;
   left: -200px;
 
   width: 180px;
@@ -823,7 +850,7 @@ dialog .inputs input{
 .files ul{
   list-style-type: none;
   padding-inline: 0;
-  background-color: #222831;
+  background-color: var( --header-footer);
   border-top-right-radius: 20px;
   border-bottom-right-radius: 20px;
   box-shadow: 0px 0px 38px -15px rgb(0, 0, 0);
@@ -832,7 +859,7 @@ dialog .inputs input{
 .files ul li{
   padding: 5px;
 
-  color: rgb(221, 221, 221);
+  color: #dddddd;
   cursor: pointer;
   padding-inline: 20px;
   padding-block: 10px;
@@ -842,14 +869,22 @@ dialog .inputs input{
   color: orange;
 }
 
-.files ul li:nth-of-type(4){
+.files ul li:nth-of-type(5){
   border-top: 1px solid rgb(114, 114, 114);
 }
 
-.files ul li:nth-of-type(1):hover, .files ul li:nth-of-type(2):hover, .files ul li:nth-of-type(3):hover{
+.files ul li:nth-of-type(1):hover, .files ul li:nth-of-type(2):hover, .files ul li:nth-of-type(3):hover, .files ul li:nth-of-type(4):hover{
   color: royalblue;
 }
 
 .currentLineEdited{
   background-color: rgba(18, 28, 51, 0.303);
+}
+
+.saveAsHex{
+  display: none;
+}
+
+.saveHexToggle{
+  display: block;
 }

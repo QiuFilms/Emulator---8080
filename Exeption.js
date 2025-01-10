@@ -2,6 +2,7 @@ export class Exeption{
     constructor(line, instruction){
         this.line = line
         this.instruction = instruction
+        this.throw()
     }
 
     throw(){

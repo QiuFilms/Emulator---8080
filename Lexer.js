@@ -1,4 +1,6 @@
+import { Expression } from "./Expression.js"
 import { HexCode } from "./HexCode.js"
+import { Labels } from "./Lexer/Labels.js"
 import { Memory } from "./Processor/Memory.js"
 import { ProgramCounter } from "./Processor/ProgramCounter.js"
 import { Utils } from "./utils.js"
@@ -7,11 +9,18 @@ const noneArgument = ["RLC", "RAL", "RRC", "RAR", "DAA", "STC", "HLT", "CMA", "C
 const calls = ["CNZ", "CNC", "CPO","CP", "CZ", "CC", "CPE", "CM", "CALL"]
 const jumps = ["JNZ", "JNC", "JPO","JP", "JZ", "JC", "JPE", "JM", "JMP"]
 
+const ArgumentType = {
+    NUMBER : 1,
+    STRING : 2,
+    EXPRESSION : 3
+}
+
+
 export class Lexer{
-    //PC = 2047
     ProgramCounter = new ProgramCounter(-1)
-    //Memory = {}
-    
+    labelsAddress = new Labels()
+    labelsEQU = new Labels()
+
     Labels = {}
     LabelsToFill = new Array()
     current = ""
@@ -51,10 +60,11 @@ export class Lexer{
             this.current = ""
             for (let j = 0; j < word.length; j++) {
                 let letter = word[j]
+                
 
                 if((this.current.toUpperCase() in Lexer.prototype || (calls.includes(this.current.toUpperCase()) || jumps.includes(this.current.toUpperCase()))) && letter == ' '){
                     this.linePcAssociation[this.ProgramCounter.get()+1] = line
-
+                    
                     if((calls.includes(this.current.toUpperCase()) || jumps.includes(this.current.toUpperCase()))){
                         if(!this.CALL(word.slice(this.current.length).trim())){
                             return {
@@ -85,7 +95,7 @@ export class Lexer{
                 
                 if(`${this.current}${letter}`.toUpperCase() in Lexer.prototype && (word.trim().length ==`${this.current}${letter}`.length )){
                     this.current = `${this.current}${letter}`.toUpperCase()
-                    
+                        
                     this.linePcAssociation[this.ProgramCounter.get()+1] = line
                     if(!this[this.current]()){
                         return {
@@ -105,6 +115,7 @@ export class Lexer{
                 if(noneArgument.includes(`${this.current}${letter}`.toUpperCase()) && (word.trim().length ==`${this.current}${letter}`.length )){
                     this.current = `${this.current}${letter}`.toUpperCase()
                     this.linePcAssociation[this.ProgramCounter.get()+1] = line
+                    
                     if(!this.noneArgumentTemplate()){
                         return {
                             status: false,
@@ -120,16 +131,29 @@ export class Lexer{
                 }
 
                 
+                //console.log(word.length, this.current.length);
+                //console.log( this.current);
+                this.current += letter
                 
                 
-                if(letter == ":"){
-                    //this.ProgramCounter.add(1)
-                
-                    //this.Memory[this.ProgramCounter.toHex()] = [this.current]
-                    //this.Memory.writeLabel(this.ProgramCounter.get(), this.current)
-                    this.Labels[this.current] = this.ProgramCounter.offset(1).toHexOffset()
-                    
+                if((letter == ":" || (letter == " ") || word.length == this.current.length) && (/^\w+\s{0,1}:{0,1}$/i).test(this.current)&& !(this.current.toUpperCase() in Lexer.prototype || this.current.toLowerCase() in Lexer.prototype)){
                     let rest = word.slice(this.current.length + 1).trim()
+
+                    if((/\s+equ\s+/i).test(word)){
+                        this.labelsEQU.add(this.current, this.ProgramCounter.offset(1).toHexOffset())
+                        this.equ(word)
+                        this.current = ""  
+
+                        line++
+                        
+                        word = rest
+                        continue
+                    }else{
+                        //this.Labels[this.current] = this.ProgramCounter.offset(1).toHexOffset()
+                        let label = this.current.trim().at(-1) == ":" ? this.current.slice(0, -1) : this.current
+                        
+                        this.labelsAddress.add(label, this.ProgramCounter.offset(1).toHexOffset())
+                    }
                     
                     this.current = ""  
                     if(rest.length == 0){
@@ -143,7 +167,6 @@ export class Lexer{
                     continue
                 }
 
-                this.current += letter
                             
                 
                 if(Object.keys(this.Memory.return()).length == 0 && this.current.toUpperCase() === "ORG"){
@@ -161,6 +184,8 @@ export class Lexer{
                 }
 
                 if(this.current.length == word.length && word != ""){
+                    console.log( this.current);
+
                     return {
                         status: false,
                         error: {
@@ -178,7 +203,8 @@ export class Lexer{
         this.fillLabelsAdresess()
         new HexCode(this.Memory, this.linePcAssociation).insertHexCode()
 
-        //this.printToBox()
+        console.log(this.Memory.return());
+        
         return {
             status: true,
             Memory: this.Memory,
@@ -186,11 +212,25 @@ export class Lexer{
         }
     }
 
-    printToBox(){
-    }
-
 
     fillLabelsAdresess(){
+        for(const element of this.LabelsToFill){
+            if(this.labelsAddress.get(element[1])){
+                this.Memory.writeByte(element[0], this.labelsAddress.get(element[1]).slice(2))
+                this.Memory.writeByte(element[0] + 1, this.labelsAddress.get(element[1]).slice(0, 2))
+                continue
+            }
+            
+            if(this.labelsEQU.get(element[1])){
+                this.Memory.writeByte(element[0], (this.labelsEQU.get(element[1])))
+                continue
+            }
+
+            throw new Error()
+        }
+    }
+
+    fillLabelsAdresess2(){
         for(const label of this.LabelsToFill){
             
             if(!(label[1] in this.Labels)){
@@ -203,9 +243,6 @@ export class Lexer{
 
             this.Memory.writeByte(pc, bytes.slice(2))
             this.Memory.writeByte(pc + 1, bytes.slice(0, 2))
-
-            //this.Memory[Utils.DecimalToHex16Bit(pc)] = Utils.formatBytesToMemory(bytes.slice(2))
-            //this.Memory[Utils.DecimalToHex16Bit(pc + 1)] = Utils.formatBytesToMemory(bytes.slice(0,2))
         }
     }
 
@@ -215,10 +252,67 @@ export class Lexer{
 
     noneArgumentTemplate(){
         this.ProgramCounter.add(1)
-        //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)  
         this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
         return true
     }
+
+    #argumentRegister(register, regex){
+        if(regex.test(register)){
+            return true
+        }
+        return false
+    }
+
+    #argument8bit(argument){
+        let comment = /;(?=(?:[^']*'[^']*')*[^']*$).*/g
+        const match = argument.match(comment)
+
+        if(match){
+            argument = argument.replace(match, "").trim()
+        }
+
+        let pattern = /^((0{0,2}[0-9A-F]{1,2}H)|(((0?[0-2]?[0-5]{1,2}D?)|(0?[0-9]{1,2})))|([01]{1,8}B)|(([0-3]?[0-7]{1,2})(Q|O)))$/i
+        //Number
+        if(pattern.test(argument)){
+            return Utils.formatNumberToHex8Bit(argument)
+        }
+
+        //String
+        pattern = /^'.'$/
+        if(pattern.test(argument)){
+            return Utils.formatNumberToHex8Bit(Number(argument.charCodeAt(1)))
+        }
+
+        //Expression
+        pattern = /(\+|\-|\*|\/|(NOT)|(AND)|(OR)|(XOR)|\(|\))/i
+        if(pattern.test(argument)){
+            const value = new Expression(argument, this.ProgramCounter.offset(1).getOffset()).evaluate(255)
+            if(value !== null){
+                return Utils.formatNumberToHex8Bit(value)
+            }
+            return null
+        }
+
+        return null
+    }
+
+    #argument16bit(argument){
+        
+    }
+
+    #labelAssign(label){
+        if(this.labelsAddress.get(label)){
+            return this.labelsAddress.get(label)
+        }
+
+        if(this.labelsEQU.get(label)){
+            return this.labelsEQU.get(label)
+        }
+        
+        this.LabelsToFill.push([this.ProgramCounter.offset(2).getOffset(), label])
+        return false
+    }
+
 
     ORG(arg){
         let pattern = /(([0-9A-F]{1,4}H)|((((([0-5]?\d{1,4})|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5])D?)|(0?[0-9]{1,2})))|([01]{1,16}B)|(([0-3]?[0-7]{1,2})(Q|O)))/i
@@ -230,6 +324,23 @@ export class Lexer{
             this.ProgramCounter.setOrigin(Utils.HexToDecimal(Utils.formatNumberToHex16Bit(arg).join("")) - 1) 
 
             this.getOrigin = () => this.ProgramCounter.getOrigin() + 1
+            return true
+        }
+
+        return false
+    }
+
+    equ(arg){
+        console.log(arg);
+        
+        let label = arg.split(/\s+equ\s+/i)[0]
+        label = label[label.length - 1] == ":" ? label.slice(0,-1) : label
+        const argument = this.#argument8bit(arg.split(/\s+equ\s+/i)[1].trim())
+
+        if(argument){
+            this.labelsEQU.add(label, argument)
+            console.log(label);
+            
             return true
         }
 
@@ -256,49 +367,37 @@ export class Lexer{
     }
 
     MVI(args){
-        let pattern = /^([A-E]|[HL]|M)(\s|\t)*,(\s|\t)*((0{0,2}[0-9A-F]{1,2}H)|(((0?[0-2]?[0-5]{1,2}D?)|(0?[0-9]{1,2})))|([01]{1,8}B)|(([0-3]?[0-7]{1,2})(Q|O)))$/i
+        const instructionArguments = args.split(",")
+        const register = instructionArguments[0].trim()
         
-        if(pattern.test(args)){
-            args = args.split(",")
-            args.forEach((value, index) => args[index] = value.trim().toUpperCase())
-            
-            const byte = Utils.formatNumberToHex8Bit(args[1])
+        if(this.#argumentRegister(register, /^([A-E]|[HL]|M)$/i)){
+            const argument = this.#argument8bit(instructionArguments[1].trim())
 
-            this.ProgramCounter.add(1)
-            
-            this.current += ` ${args[0]}`
-            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)
-            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
-            this.ProgramCounter.add(1)
-            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatBytesToMemory(byte)
-            this.Memory.writeByte(this.ProgramCounter.get(), byte)
-
-            return true
-        }
-
-        pattern = /^([A-E]|[HL])(\s|\t)*,(\s|\t)*'.'$/i
-        if(pattern.test(args)){
-            args = args.split(",")
-            args.forEach((value, index) => args[index] = value.trim())
-            if(args.length > 3){
-                return false
+            if(argument !== null){
+                this.current += ` ${args[0]}`
+                this.Memory.writeInstruction(this.ProgramCounter.add(1).get(), this.current)
+                this.Memory.writeByte(this.ProgramCounter.add(1).get(), argument)
+                return true
             }
+
             
-            const byte = Utils.DecimalToHex8Bit(Number(args[1].charCodeAt(1)))
+            const labelArgument = this.#labelAssign(instructionArguments[1].trim())
+            if(labelArgument == null) return false
 
-            this.ProgramCounter.add(1)
-            this.current += ` ${args[0].toUpperCase()}`
-            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)
-            this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
-
-            this.ProgramCounter.add(1)
-            //this.Memory[this.ProgramCounter.toHex()] = Utils.formatBytesToMemory(byte)
-            this.Memory.writeByte(this.ProgramCounter.get(), byte)
-
-            return true
-        }  
+            if(labelArgument !== false){
+                this.current += ` ${args[0]}`
+                this.Memory.writeInstruction(this.ProgramCounter.add(1).get(), this.current)
+                this.Memory.writeByte(this.ProgramCounter.add(1).get(), labelArgument)
+                return true
+            }else{
+                this.current += ` ${args[0]}`
+                this.Memory.writeInstruction(this.ProgramCounter.add(1).get(), this.current)
+                return true
+            }
+        }
         return false
     }
+
 
     RST(arg){
         let pattern = /^[0-7]{1}$/
@@ -484,15 +583,16 @@ export class Lexer{
 
 
     DCR(arg){
-        let pattern = /$([A-E]|[HL]|M)$/i
+        
+        let pattern = /^[A-E]|[HL]|M$/i
         arg = arg.trim()
-    
+
         if(pattern.test(arg)){
             this.ProgramCounter.add(1)
             this.current += ` ${arg}`
             //this.Memory[this.ProgramCounter.toHex()] = Utils.formatInstructionToMemory(this.current)
             this.Memory.writeInstruction(this.ProgramCounter.get(), this.current)
-
+            
             return true
         }
         return false

@@ -10,12 +10,14 @@ import { UIBridge } from "./Processor/UIBridge/UIBridge.js";
 import { Utils } from "./utils.js";
 
 var document = window.document
-
+//document.documentElement.setAttribute('data-theme', "dark");
 window.addEventListener('load', function() {  
     if(typeof FileManager.getRecent() != "undefined"){
         textarea.value = FileManager.getRecent() 
         textarea.selectionEnd = 0
         simulateInput("input", "textarea")
+        simulateInput("keyup", "textarea")
+
     }else{
         FileManager.prepareMemory()
     }
@@ -31,9 +33,9 @@ const textarea = document.querySelector("textarea");
 
 const Bridge = new UIBridge()
 function readASM(){
-    if(document.querySelector("pre").querySelector(".currentLineEdited")){
-        document.querySelector("pre > .currentLineEdited").classList.toggle("currentLineEdited")
-    }
+    // if(document.querySelector("pre").querySelector(".currentLineEdited")){
+    //     document.querySelector("pre > .currentLineEdited").classList.toggle("currentLineEdited")
+    // }
 
     const text = document.querySelector("textarea").value
     document.querySelector(".display").innerText = ""
@@ -43,7 +45,7 @@ function readASM(){
     const response = lexer.parse(text)
     
     const proc = new Processor(lexer, Bridge, this)
-    //proc.setOrigin(lexer.getOrigin())
+
     
     
     document.querySelector(".stop").onclick = () => {
@@ -53,29 +55,48 @@ function readASM(){
         stopASM(proc)
     }
     if(!response.status){
-        return new Exeption(response.error.line, response.error.instruction).throw()
+        return new Exeption(response.error.line, response.error.instruction)
     }
     Exeption.hide()
     
-    //proc.setLinePcAssociation(lexer.getAssociation())
+
     Bridge.setLinePcAssociation(lexer.getAssociation())
-    Bridge.setBreakPoints(breakPoints)
-    
-    
-    //Processor.setBreakPoints(breakPoints)
-    //proc.setWorkType(this).init(response)
-    //proc.setWorkType(this)
-    //console.log(proc.Memory);
+    Bridge.defineBreakPoints()
+
+    saveHexToggle(lexer.Memory.return())
+
     
     document.querySelector(".start").style.display = "none"
     document.querySelector(".step").style.display = "none"
     document.querySelector(".stop").style.display = "flex"
-
     proc.start()
 
-    //console.log(proc.Memory);
-
     
+    
+}
+
+function saveHexToggle(memory){
+    if(Object.keys(memory).length != 0){
+        const hexArray = new Array()
+
+        for(const key of Object.keys(memory).sort()){
+            hexArray.push(`0x${memory[key][1]}`)   
+        }
+
+        document.querySelector(".saveAsHex").classList.add("saveHexToggle")
+        document.querySelector(".saveAsHex").onclick = () => {
+            const blob = new Blob([new Uint8Array(hexArray)], { type: 'application/octet-stream' });
+
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'binary.bin';
+            link.click();
+      
+            URL.revokeObjectURL(link.href);
+        }
+    }else{
+        document.querySelector(".saveAsHex").classList.remove("saveHexToggle")
+    }
 }
 
 Bridge.addEventListener('running_updateRegisters', (e) => { 
@@ -214,18 +235,7 @@ function showDefinition(){
     const row = getCaretRow()
     const parser = new DOMParser()
     
-    //EditorLineIndicator
-    if(document.querySelector("pre").childNodes.length != 0){
-        if(document.querySelector("pre").querySelector(".currentLineEdited")){
-            document.querySelector("pre > .currentLineEdited").classList.toggle("currentLineEdited")
-        }
-        
-        
-        if(row <= document.querySelector("pre").childNodes.length){
-            document.querySelectorAll("pre > span")[row - 1].classList.toggle("currentLineEdited")
-        }
-    }
-    ////
+
     
     if(!(typeof codeFormatter.code[row - 1] != 'undefined' && codeFormatter.code[row - 1].length)){
 
@@ -265,10 +275,26 @@ function showDefinition(){
 
 }
 
+
+function editorLineIndicator(){
+    const row = getCaretRow()
+    
+    if(document.querySelector("pre").childNodes.length != 0){
+        if(document.querySelector("pre").querySelector(".currentLineEdited")){
+            document.querySelector("pre > .currentLineEdited").classList.toggle("currentLineEdited")
+        }
+        
+        
+        if(row <= document.querySelector("pre").childNodes.length){
+            document.querySelectorAll("pre > span")[row - 1].classList.toggle("currentLineEdited")
+        }
+    }
+}
 // Event listener to log the row number
 textarea.addEventListener("input", showDefinition);
 textarea.addEventListener("click", showDefinition);
 textarea.addEventListener("keyup", showDefinition);
+
 
 document.querySelector(".def").addEventListener("mouseenter",() => {
     document.querySelector(".definition").style.display = "block"
@@ -284,14 +310,16 @@ window.breakPoints = breakPoints
 
 
 function addBreakPoint(){
+    
     if(!this.classList.contains("breakPoint")){
         breakPoints.add(parseInt(this.innerText))
         this.classList.add("breakPoint")
-        Processor.setBreakPoints(breakPoints)
+        //Bridge.addBreakPoint(this.innerText)
+        //Processor.setBreakPoints(breakPoints)
         return
     }
 
-    breakPoints.delete(parseInt(this.innerText))
+    //breakPoints.delete(parseInt(this.innerText))
     this.classList.remove("breakPoint")
 }
 window.addBreakPoint = addBreakPoint
@@ -365,6 +393,8 @@ document.querySelector('textarea').addEventListener('keydown', function(e) {
         simulateInput("input", "textarea")
 
     }
+
+    //editorLineIndicator()
 })
 
 document.querySelector('textarea').addEventListener('keyup', function(e) {
@@ -403,15 +433,30 @@ document.querySelector(".fileInput").addEventListener("change", function(event) 
     const file = event.target.files[0]
     
     if(file){
-        FileManager.read(file, (e) => {
-            const textarea = document.querySelector("textarea");
-            textarea.value = e.target.result;
-            this.value = ""
-            
-            simulateInput("input", "textarea")
-        })  
+        if(file.name.split(".").pop() == "bin"){
+            FileManager.readAsArrayBuffer(file, (e) => {
+                
+                const hex = arrayBufferToHex(e.target.result);
+                console.log(hex);
+            }) 
+        }else{
+            FileManager.readAsText(file, (e) => {
+                const textarea = document.querySelector("textarea");
+                textarea.value = e.target.result;
+                this.value = ""
+                
+                simulateInput("input", "textarea")
+            }) 
+        }
     }
 });
+
+function arrayBufferToHex(buffer) {
+    const bytes = new Uint8Array(buffer);
+    const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join(' ');
+    return hex;
+}
+
 
 document.querySelector(".saveButton").addEventListener("click", function(event) {
     const name = document.querySelector(".fileName").value
@@ -506,8 +551,8 @@ document.querySelector(".customFileInput").addEventListener("click", (e) => {
     const files = FileManager.getFiles()
     const ul = document.querySelector(".files > ul")
 
-    while (ul.children.length > 3) {
-        ul.removeChild(ul.children[3]);
+    while (ul.children.length > 4) {
+        ul.removeChild(ul.children[4]);
     }
 
     for (const file in files) {
@@ -522,9 +567,12 @@ document.querySelector(".customFileInput").addEventListener("click", (e) => {
             simulateInput("input", "textarea")
             simulateInput("keyup", "textarea")
 
-            document.querySelector(".files").classList.toggle("filesOpened")
-
-
+            if(document.querySelector(".stop").style.display == "flex"){
+                document.querySelector(".stop").click()
+            }else{
+                document.querySelector(".files").classList.toggle("filesOpened")
+            }
+            
         }
         document.querySelector(".files > ul").appendChild(li)
     }

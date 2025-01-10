@@ -11,35 +11,43 @@ export class UIBridge extends EventTarget{
     }
 
     dispatch(name){
-        //console.log(name);
-        
         this.dispatchEvent(this.events[name])
     }
 
-    setBreakPoints(breakPoints){
-        this.breakPoints = breakPoints
+    defineBreakPoints(){
+        this.breakPoints.clear()
+        for(const element of document.querySelectorAll(".breakPoint")){
+            this.breakPoints.add(element.innerText)
+        }
     }
 
+    // setBreakPoints(breakPoints){
+    //     this.breakPoints = breakPoints
+    // }
 
-    getBreakPoints(breakPoints){
-        this.breakPoints = breakPoints
-    }
+    // getBreakPoints(breakPoints){
+    //     this.breakPoints = breakPoints
+    // }
 
     hasBreakPoint(programCounter){
-        return this.breakPoints.has(programCounter in this.linePcAssociation ? this.linePcAssociation[programCounter] : -1)
+        return this.breakPoints.has((programCounter in this.lineAssociation ? this.lineAssociation[programCounter] : -1).toString())
     }
+
+    removeBreakPoint(programCounter){
+        this.breakPoints.delete(this.lineAssociation[programCounter].toString())
+    } 
 
     setLinePcAssociation(assoc){
-        this.linePcAssociation = assoc
+        this.lineAssociation = assoc
     }
 
-    getLinePcAssociation(){
-        return this.linePcAssociation
-    }
+    // getLinePcAssociation(){
+    //     return this.linePcAssociation
+    // }
     
 
     getLineFromPC(programCounter){
-        return this.linePcAssociation[programCounter]
+        return this.lineAssociation[programCounter]
     }
 
 
