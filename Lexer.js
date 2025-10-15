@@ -271,6 +271,7 @@ export class Lexer{
             argument = argument.replace(match, "").trim()
         }
 
+        // let pattern = /^\-{0,1}((0{0,2}[0-9A-F]{1,2}H)|(((0?[0-2]?[0-5]{1,2}D?)|(0?[0-9]{1,2})))|([01]{1,8}B)|(([0-3]?[0-7]{1,2})(Q|O)))$/i
         let pattern = /^((0{0,2}[0-9A-F]{1,2}H)|(((0?[0-2]?[0-5]{1,2}D?)|(0?[0-9]{1,2})))|([01]{1,8}B)|(([0-3]?[0-7]{1,2})(Q|O)))$/i
         //Number
         if(pattern.test(argument)){
@@ -318,9 +319,9 @@ export class Lexer{
         let pattern = /(([0-9A-F]{1,4}H)|((((([0-5]?\d{1,4})|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5])D?)|(0?[0-9]{1,2})))|([01]{1,16}B)|(([0-3]?[0-7]{1,2})(Q|O)))/i
         arg = arg.trim() 
 
-        console.log(pattern.test(pattern));
+        console.log(pattern.test(arg));
         
-        if(pattern.test(pattern)){
+        if(pattern.test(arg)){
             this.ProgramCounter.setOrigin(Utils.HexToDecimal(Utils.formatNumberToHex16Bit(arg).join("")) - 1) 
 
             this.getOrigin = () => this.ProgramCounter.getOrigin() + 1

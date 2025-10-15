@@ -19,12 +19,12 @@ export class Expression{
         this.#expression = expression
         this.#operandStack = new Array()
         this.#resultStack = new Array()
-        this.prepate(programCounter)
+        this.prepare(programCounter)  
     }
 
 
 
-    prepate(programCounter){
+    prepare(programCounter){
         // try {
         //     return eval(this.#expression)
         // } catch (error) {
@@ -77,6 +77,7 @@ export class Expression{
             if(number != ""){
                 this.#resultStack.push(number)
             }
+            
             this.#emptyStack()
             
     }
@@ -120,12 +121,15 @@ export class Expression{
     evaluate(max = 65535){
         for (let i = 0; i < this.#resultStack.length; i++) {
             const element = this.#resultStack[i];
-            //console.log(this.#resultStack);
+            console.log(this.#resultStack);
             
             if(this.#isOperand(element)){
                 if(element.length == 1){
-                    //console.log((`${this.#resultStack.splice(i - 1, 1)} ${this.#resultStack.splice(i - 1, 1)} ${this.#resultStack[i-2]}`));
-                    this.#resultStack[i-2] = eval(`${this.#resultStack.splice(i - 1, 1)[0]} ${this.#resultStack.splice(i - 1, 1)[0]} ${this.#resultStack[i-2]}`);
+                    // console.log( `${this.#resultStack.splice(i - 2, 1)[0]} ${this.#resultStack.splice(i - 1, 1)[0]} ${this.#resultStack[i-2]}`);
+
+                    this.#resultStack[i-2] = eval(`${this.#resultStack.splice(i - 2, 1)[0]} ${this.#resultStack.splice(i - 1, 1)[0]} ${this.#resultStack[i-2]}`);
+
+                    
                     i -= 2
                 }else{
                     if(element == "NOT"){
@@ -138,6 +142,10 @@ export class Expression{
                     }
 
                 }
+            }
+
+            if(this.#resultStack[0] < 0){
+                this.#resultStack[0] += max
             }
         }
 
